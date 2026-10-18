@@ -105,7 +105,7 @@ export class DropScene {
           float edge = 1.0 - vP.y;
           vec3 v = normalize(cameraPosition - vW);
           float rim = pow(1.0 - abs(dot(v, vN)), 1.5);
-          float a = uK * (0.35 + rim*0.9) * (0.6 + stripes*0.5) * edge;
+          float a = uK * (0.04 + pow(rim, 2.0)*1.1) * (0.6 + stripes*0.5) * edge;
           vec3 c = mix(vec3(1.0,0.45,0.1), vec3(1.0,0.95,0.7), rim);
           gl_FragColor = vec4(c*2.2, a);
         }`,
