@@ -52,7 +52,8 @@ export class Game {
     this.hitstopT = 0;
     this.camPivot = new THREE.Vector3();
     this.camPos = new THREE.Vector3(0, 300, 800);
-    this.applyQuality(this.app.settings.quality);
+    this.city.sun.castShadow = this.app.settings.quality === 'high';
+    if (this.app.game) this.app.resize(); // size particles for the new world
   }
 
   disposeWorld() {
@@ -67,12 +68,6 @@ export class Game {
       }
     });
     try { this.physics.world.free(); } catch (e) { /* already freed */ }
-  }
-
-  applyQuality(q) {
-    const high = q === 'high';
-    this.city.sun.castShadow = high;
-    this.scene.traverse((o) => { if (o.isMesh || o.isInstancedMesh) o.castShadow = o.castShadow && high; });
   }
 
   // ---------------------------------------------------------------- mission flow
@@ -369,9 +364,9 @@ export class Game {
         audio.setLoop('wind', 0);
         audio.play('explosion', m.pos, 1.3);
         audio.play('stomp', m.pos, 1.5);
-        this.fx.groundDust(m.pos, 140, 70);
+        this.fx.groundDust(m.pos, 120, 40);
         this.fx.ring(m.pos, 10, 200, 1.0, '#ffe8c0', 0.7);
-        this.fx.dust(m.pos.clone().setY(5), 2.5, 20);
+        this.fx.dust(m.pos.clone().setY(5), 1.8, 10);
         this.city.damageArea(new THREE.Vector3(LAND.x, 5, LAND.z), 75, 1400, { source: 'landing', force: 2.2 });
         this.city.crushCars(LAND.x, LAND.z, 70);
         this.shake(2.5);
@@ -403,6 +398,9 @@ export class Game {
     this.nav.say('touchdown', `Touchdown! ${this.cfg.name} is in the city. Move with W A S D and look with the mouse.`, 3, 0);
     this.stats.start = this.time;
     if (this.app.settings.music) audio.startMusic();
+    if (this.mode === 'smash') {
+      setTimeout(() => this.nav.say('smashMode', 'Free Smash mode! Smash anything you want. Press K whenever you want a kaiju to show up.', 3, 0), 6000);
+    }
   }
 
   updateWaves(dt) {
@@ -686,7 +684,7 @@ export class Game {
     this.state = 'over';
     this.nav.say('victory', `Mission complete! ${this.cfg.name} saved the city! You are a real Jaeger pilot!`, 3, 0);
     audio.play('uiBig');
-    setTimeout(() => this.app.showEnd(true, this.summary()), 3500);
+    setTimeout(() => { if (this.state === 'over') this.app.showEnd(true, this.summary()); }, 3500);
   }
 
   defeat(title, sub) {
@@ -694,7 +692,7 @@ export class Game {
     this.over = true;
     this.state = 'over';
     audio.intensity = 0.1;
-    setTimeout(() => this.app.showEnd(false, { ...this.summary(), title, sub }), 3500);
+    setTimeout(() => { if (this.state === 'over') this.app.showEnd(false, { ...this.summary(), title, sub }); }, 3500);
   }
 
   continueEndless() {

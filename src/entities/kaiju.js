@@ -345,7 +345,7 @@ export class Kaiju {
     }
     if (T && T.kind === 'plant' && T.ent.alive) {
       const pt = new THREE.Vector3(THREE.MathUtils.clamp(center.x, T.ent.x - T.ent.hw, T.ent.x + T.ent.hw), Math.min(center.y, T.ent.h * 0.6), THREE.MathUtils.clamp(center.z, T.ent.z - T.ent.hd, T.ent.z + T.ent.hd));
-      if (pt.distanceTo(center) < radius + 25) g.city.damage(T.ent, dmg * 2.2, pt, f, { source: 'kaiju' });
+      if (pt.distanceTo(center) < radius + 25) g.city.damage(T.ent, dmg * 1.5, pt, f, { source: 'kaiju' });
     }
   }
 

@@ -84,8 +84,9 @@ export class DropScene {
       uniforms: { uK: { value: 0 } },
       vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: `uniform float uK; varying vec3 vD; void main(){
-        vec3 top = vec3(0.02,0.02,0.08); vec3 bot = vec3(1.0,0.35,0.08);
-        vec3 c = mix(bot, top, smoothstep(-0.6, 0.6, vD.y));
+        vec3 top = vec3(0.01,0.01,0.05); vec3 mid = vec3(0.35,0.08,0.05); vec3 bot = vec3(0.9,0.28,0.05);
+        vec3 c = mix(bot, mid, smoothstep(-0.9, -0.2, vD.y));
+        c = mix(c, top, smoothstep(-0.2, 0.5, vD.y));
         gl_FragColor = vec4(c, uK);
         #include <colorspace_fragment>
       }`,
@@ -279,8 +280,8 @@ export class DropScene {
       this.plasma.material.uniforms.uT.value = time;
       this.plasma.material.uniforms.uK.value = heat;
       const shake = heat * 3;
-      cam.position.set(Math.sin(t * 0.4) * 30 + 140 + (Math.random() - 0.5) * shake, 50 + (Math.random() - 0.5) * shake, 150);
-      cam.lookAt(0, -70, 0);
+      cam.position.set(Math.sin(t * 0.4) * 30 + 150 + (Math.random() - 0.5) * shake, 10 + (Math.random() - 0.5) * shake, 160);
+      cam.lookAt(0, -45, 0);
       // streaks of fire flying past
       for (let i = 0; i < 30 * heat + 1; i++) {
         // fire streaks peel off the heat shield and race upward past the drone

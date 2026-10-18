@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { makeScaleBump } from '../world/textures.js';
+import { mergeStatic } from '../util/merge.js';
 
 let bump = null;
 const SKINS = [
@@ -265,6 +266,7 @@ export function buildKaiju(type) {
     hit.push({ obj: sac, r: 6.5, off: new THREE.Vector3(), weak: true, name: wc.label });
   }
 
+  mergeStatic(root);
   root.traverse((o) => { if (o.isMesh) { o.castShadow = true; } });
   return { root, j, hit, mats, weakSpots, radius, height, glowCol, footY };
 }

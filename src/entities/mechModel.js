@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { makePanelTexture } from '../world/textures.js';
+import { mergeStatic } from '../util/merge.js';
 
 let panelTex = null;
 const geoCache = new Map();
@@ -187,6 +188,7 @@ export function buildMech(cfg) {
   }
 
   // Cockpit glow light for nice rim
+  mergeStatic(root);
   root.traverse((o) => { if (o.isMesh) o.userData.mech = true; });
   return { root, j, mats, blades, muzzle, weapons };
 }

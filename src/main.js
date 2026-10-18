@@ -154,6 +154,7 @@ class App {
 
   startGame() {
     this.state = 'game';
+    this.input.endFrame(); // the key that skipped the drop shouldn't also skip the landing
     this.game.startMission({ ...this.hangar.cfg }, this.settings.mode);
     this.nav.show(true);
   }

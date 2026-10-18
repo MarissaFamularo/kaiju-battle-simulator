@@ -74,11 +74,14 @@ export class City {
     this.onPlantDamaged = null;
     this.onBuildingDestroyed = null;
     this.rng = srand(1337);
+    this.tiles = new Map();
+    this.beaconGeo = new THREE.SphereGeometry(1.4, 8, 6);
     this.makeMaterials();
     this.makeGround();
     this.makeSky();
     this.makeLights();
     this.generate();
+    this.updateTiles();
     this.makePowerPlant();
     this.makeDecor();
     this.makeMountains();
@@ -111,7 +114,7 @@ export class City {
     this.detailMat = new THREE.MeshStandardMaterial({ color: '#7d8187', roughness: 0.6, metalness: 0.5 });
     this.concreteMat = new THREE.MeshStandardMaterial({ color: '#b9b6ae', roughness: 0.85 });
     this.plantMetal = new THREE.MeshStandardMaterial({ color: '#8c939b', roughness: 0.5, metalness: 0.6 });
-    this.rubbleMat = new THREE.MeshStandardMaterial({ color: '#56534e', roughness: 1 });
+    this.rubbleMat = new THREE.MeshStandardMaterial({ color: '#6b665e', roughness: 1, flatShading: true });
     this.beaconMat = new THREE.MeshBasicMaterial({ color: '#ff2a2a' });
   }
 
@@ -298,27 +301,62 @@ export class City {
       roof.box(x, y, z, 0.8, ah, 0.8);
       antenna = new THREE.Vector3(x, y + ah, z);
     }
-    const group = new THREE.Group();
-    const wm = new THREE.Mesh(walls.build(), this.wallMats[matIndex]);
-    wm.castShadow = wm.receiveShadow = true;
-    const rm = new THREE.Mesh(roof.build(), this.roofMat);
-    rm.castShadow = rm.receiveShadow = true;
-    group.add(wm, rm);
+    let beacon = null;
     if (antenna) {
-      const b = new THREE.Mesh(new THREE.SphereGeometry(1.4, 8, 6), this.beaconMat);
-      b.position.copy(antenna);
-      group.add(b);
-      this.beacons.push(b);
+      beacon = new THREE.Mesh(this.beaconGeo, this.beaconMat);
+      beacon.position.copy(antenna);
+      this.root.add(beacon);
+      this.beacons.push(beacon);
     }
-    this.root.add(group);
     const vol = pieces.reduce((s, p) => s + p.hx * p.hy * p.hz * 8, 0);
     const b = {
-      id: this.buildings.length, x, z, hw, hd, h: y, pieces, group, alive: true,
+      id: this.buildings.length, x, z, hw, hd, h: y, pieces, group: null, alive: true,
       hp: 0, maxHp: 0, mat: matIndex, plant: false, bodies: [], burning: false,
+      geoW: walls.build(), geoR: roof.build(), beacon, ghost: null,
     };
     b.maxHp = b.hp = 50 + vol / 700;
     this.registerBuilding(b);
+    this.tileFor(x, z).buildings.push(b);
     return b;
+  }
+
+  // ---- batching: buildings are merged per material into tiles to keep draw calls low ----
+  tileFor(x, z) {
+    const span = WORLD.block * 2;
+    const i = Math.floor((x + WORLD.half) / span), j = Math.floor((z + WORLD.half) / span);
+    const k = i * 1000 + j;
+    if (!this.tiles.has(k)) this.tiles.set(k, { buildings: [], meshes: [], dirty: true });
+    return this.tiles.get(k);
+  }
+
+  rebuildTile(t) {
+    for (const m of t.meshes) { this.root.remove(m); m.geometry.dispose(); }
+    t.meshes = [];
+    const byMat = new Map(), roofs = [];
+    const keep = [];
+    for (const b of t.buildings) {
+      if (!b.alive) { b.geoW.dispose(); b.geoR.dispose(); continue; }
+      keep.push(b);
+      if (b.ghost) continue;
+      if (!byMat.has(b.mat)) byMat.set(b.mat, []);
+      byMat.get(b.mat).push(b.geoW);
+      roofs.push(b.geoR);
+    }
+    t.buildings = keep;
+    const add = (geos, mat) => {
+      if (!geos.length) return;
+      const m = new THREE.Mesh(mergeGeometries(geos), mat);
+      m.castShadow = m.receiveShadow = true;
+      this.root.add(m);
+      t.meshes.push(m);
+    };
+    for (const [mi, geos] of byMat) add(geos, this.wallMats[mi]);
+    add(roofs, this.roofMat);
+    t.dirty = false;
+  }
+
+  updateTiles() {
+    for (const t of this.tiles.values()) if (t.dirty) this.rebuildTile(t);
   }
 
   registerBuilding(b) {
@@ -412,18 +450,24 @@ export class City {
 
   setGhosts(set) {
     for (const b of this.ghosted) {
-      if (!set.has(b) && b.alive && !b.plant) {
-        b.group.children[0].material = this.wallMats[b.mat];
-        b.group.children[1].material = this.roofMat;
-        b.group.children[0].castShadow = b.group.children[1].castShadow = true;
-      }
+      if (set.has(b) || !b.ghost) continue;
+      this.root.remove(b.ghost);
+      b.ghost = null;
+      if (b.alive) this.tileFor(b.x, b.z).dirty = true;
     }
+    const now = new Set();
     for (const b of set) {
-      if (b.plant || !b.alive || this.ghosted.has(b)) continue;
-      b.group.children[0].material = this.ghostWall[b.mat];
-      b.group.children[1].material = this.ghostRoof;
+      if (b.plant || !b.alive) continue;
+      now.add(b);
+      if (b.ghost) continue;
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(b.geoW, this.ghostWall[b.mat]), new THREE.Mesh(b.geoR, this.ghostRoof));
+      this.root.add(g);
+      b.ghost = g;
+      this.tileFor(b.x, b.z).dirty = true;
     }
-    this.ghosted = new Set([...set].filter((b) => !b.plant && b.alive));
+    this.ghosted = now;
+    this.updateTiles();
   }
 
   damage(b, amount, point, dir, opts = {}) {
@@ -461,8 +505,14 @@ export class City {
   collapse(b, point, dir, opts = {}) {
     if (!b.alive) return;
     b.alive = false;
-    this.root.remove(b.group);
-    b.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    if (b.group) {
+      this.root.remove(b.group);
+      b.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    } else {
+      if (b.ghost) { this.root.remove(b.ghost); b.ghost = null; }
+      if (b.beacon) { this.root.remove(b.beacon); this.beacons.splice(this.beacons.indexOf(b.beacon), 1); }
+      this.tileFor(b.x, b.z).dirty = true;
+    }
     for (const body of b.bodies) this.physics.remove(body);
     b.bodies = [];
     this.fires = this.fires.filter((f) => f.b !== b);
@@ -470,7 +520,7 @@ export class City {
     const force = opts.force ?? 1;
     // chunk budget
     const totalVol = b.pieces.reduce((s, p) => s + p.hx * p.hy * p.hz * 8, 0);
-    const budget = b.plant ? 60 : Math.min(90, 16 + Math.floor(totalVol / 3500));
+    const budget = b.plant ? 60 : Math.min(110, 20 + Math.floor(totalVol / 1500));
     const chunk = Math.max(6, Math.cbrt(totalVol / budget));
     let made = 0;
     for (const p of b.pieces) {
@@ -497,7 +547,7 @@ export class City {
             -6 - Math.random() * 10,
             d.z * (10 + 30 * hf) * force + out.z * 0.9 + (Math.random() - 0.5) * 16,
           );
-          this.spawnChunk(b.plant ? -1 : b.mat, cx, cy, cz, sx * 0.42, sy * 0.42, sz * 0.42, v, 3.5);
+          this.spawnChunk(b.plant ? -1 : b.mat, cx, cy, cz, sx * 0.46, sy * 0.46, sz * 0.46, v, 3.5);
           made++;
         }
       }
@@ -508,11 +558,13 @@ export class City {
     this.fx.dust(base, s, 26);
     this.fx.groundDust(base, Math.max(b.hw, b.hd) * 2.2, 26);
     for (let k = 0; k < 6; k++) this.fx.dust(new THREE.Vector3(b.x + (Math.random() - 0.5) * b.hw * 2, Math.random() * b.h * 0.6, b.z + (Math.random() - 0.5) * b.hd * 2), s * 0.8, 5);
-    const pile = new THREE.Mesh(this.unitBox, this.rubbleMat);
-    pile.scale.set(b.hw * 1.9, 2 + Math.min(8, b.h * 0.04), b.hd * 1.9);
-    pile.position.set(b.x, pile.scale.y * 0.3, b.z);
-    pile.rotation.y = (Math.random() - 0.5) * 0.2;
-    pile.receiveShadow = true;
+    // rubble mound left behind
+    const ph = 3 + Math.min(18, b.h * 0.09);
+    const pile = new THREE.Mesh(this.pileGeo, this.rubbleMat);
+    pile.scale.set(b.hw * 1.15, ph, b.hd * 1.15);
+    pile.position.set(b.x, 0, b.z);
+    pile.rotation.y = Math.random() * Math.PI * 2;
+    pile.receiveShadow = true; pile.castShadow = true;
     this.root.add(pile);
     audio.play('collapse', base, Math.min(1.2, 0.5 + b.h / 150));
     this.destroyed += b.plant ? 0 : 1;
@@ -522,6 +574,17 @@ export class City {
   // ---------------- debris (instanced, physics-driven) ----------------
   initDebris() {
     this.unitBox = new THREE.BoxGeometry(1, 1, 1);
+    // lumpy low mound for rubble piles (unit radius, unit height)
+    const pg = new THREE.ConeGeometry(1, 1, 7, 2);
+    pg.translate(0, 0.5, 0);
+    const pp = pg.attributes.position;
+    for (let i = 0; i < pp.count; i++) {
+      const y = pp.getY(i);
+      if (y > 0.01 && y < 0.99) { pp.setX(i, pp.getX(i) * (0.8 + Math.random() * 0.5)); pp.setY(i, y * (0.7 + Math.random() * 0.5)); pp.setZ(i, pp.getZ(i) * (0.8 + Math.random() * 0.5)); }
+      if (y >= 0.99) pp.setY(i, 0.75);
+    }
+    pg.computeVertexNormals();
+    this.pileGeo = pg;
     const cap = 1400;
     this.debrisCap = cap;
     this.debrisMeshes = [];
@@ -881,7 +944,7 @@ export class City {
     for (let k = 0; k < 40; k++) {
       const a = (k / 40) * Math.PI * 2 + r() * 0.1;
       const d = 3000 + r() * 800;
-      const h = 300 + r() * 700;
+      const h = 180 + r() * 420;
       const g = new THREE.ConeGeometry(300 + r() * 400, h, 6 + Math.floor(r() * 3));
       g.translate(Math.cos(a) * d, h / 2 - 20, Math.sin(a) * d);
       geos.push(g.toNonIndexed());
@@ -891,6 +954,7 @@ export class City {
 
   // ---------------- per-frame ----------------
   update(dt, time) {
+    this.updateTiles();
     this.updateDebris(dt);
     if (this.waterNormal) this.waterNormal.offset.set(time * 0.004, time * 0.006);
     for (let i = this.fires.length - 1; i >= 0; i--) {

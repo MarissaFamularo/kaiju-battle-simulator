@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { audio } from '../audio.js';
+import { mergeStatic } from '../util/merge.js';
 
 const bodyMat = new THREE.MeshStandardMaterial({ color: '#d8dde3', roughness: 0.35, metalness: 0.6 });
 const darkMat = new THREE.MeshStandardMaterial({ color: '#25292e', roughness: 0.4, metalness: 0.7 });
@@ -45,7 +46,7 @@ export function buildCarrier(glow = '#38d8ff') {
     g.add(c);
     clamps.push(c);
   }
-  // cable lines
+  mergeStatic(g);
   return { g, fans, clamps, glowMat };
 }
 
