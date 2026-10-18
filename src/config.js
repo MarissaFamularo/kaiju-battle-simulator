@@ -1,0 +1,120 @@
+// Game-wide tuning values and Jaeger part definitions.
+// 1 world unit = 1 meter.
+
+export const WORLD = {
+  block: 110,          // city block size including road
+  road: 26,            // road width
+  grid: 14,            // blocks per side
+  bound: 1150,         // how far the player can walk from center
+  gravity: -32,        // a bit stronger than real so debris feels punchy
+};
+WORLD.half = (WORLD.block * WORLD.grid) / 2;
+
+export const FRAMES = {
+  scout: {
+    id: 'scout', name: 'Scout', desc: 'Light and fast. Great at dodging.',
+    armor: 1000, speed: 34, power: 0.85, scale: 0.9,
+  },
+  ranger: {
+    id: 'ranger', name: 'Ranger', desc: 'Balanced armor, speed and power.',
+    armor: 1400, speed: 27, power: 1.0, scale: 1.0,
+  },
+  titan: {
+    id: 'titan', name: 'Titan', desc: 'Heavy armor, hits hard, moves slow.',
+    armor: 2000, speed: 21, power: 1.25, scale: 1.12,
+  },
+};
+
+export const WEAPONS = {
+  sword: {
+    id: 'sword', name: 'Energy Sword', kind: 'melee',
+    desc: 'A glowing blade slides out of the forearm. Big damage.',
+    damage: 62, cooldown: 0.72, reach: 44, radius: 22, smash: 1.4,
+  },
+  blades: {
+    id: 'blades', name: 'Wrist Blades', kind: 'melee',
+    desc: 'Twin knives pop out of the wrist. Super fast slashes.',
+    damage: 24, cooldown: 0.28, reach: 34, radius: 18, smash: 0.8,
+  },
+  cannon: {
+    id: 'cannon', name: 'Plasma Cannon', kind: 'ranged',
+    desc: 'The hand folds into a cannon. Hit weak spots from far away.',
+    damage: 38, cooldown: 0.75, speed: 420, smash: 1.0,
+  },
+  fist: {
+    id: 'fist', name: 'Power Fist', kind: 'melee',
+    desc: 'Rocket-powered punch. Knocks kaiju back and flattens buildings.',
+    damage: 46, cooldown: 0.9, reach: 30, radius: 22, smash: 3.0, knockback: 70,
+  },
+};
+
+export const HEADS = {
+  visor: { id: 'visor', name: 'Visor' },
+  dome: { id: 'dome', name: 'Dome' },
+  crest: { id: 'crest', name: 'Crest' },
+};
+
+export const PALETTE = [
+  '#c9d3df', '#2c5aa0', '#b8202a', '#e0a21b', '#2e8b57', '#23262d',
+  '#6b3fa0', '#e86a1a', '#1aa3a3', '#f2f2f2', '#7a8796', '#d94f8a',
+];
+export const GLOWS = ['#38d8ff', '#ff5a1f', '#7dff5a', '#ff3af2', '#ffe14a', '#ffffff'];
+
+export const DEFAULT_JAEGER = {
+  name: 'STORM TITAN',
+  primary: '#2c5aa0',
+  accent: '#c9d3df',
+  glow: '#38d8ff',
+  frame: 'ranger',
+  left: 'sword',
+  right: 'cannon',
+  head: 'visor',
+};
+
+export const KAIJU_CATS = [
+  null,
+  { cat: 1, hp: 800, scale: 0.8, dmg: 55, speed: 22 },
+  { cat: 2, hp: 1200, scale: 0.95, dmg: 75, speed: 20 },
+  { cat: 3, hp: 1750, scale: 1.1, dmg: 95, speed: 19 },
+  { cat: 4, hp: 2400, scale: 1.28, dmg: 120, speed: 17 },
+  { cat: 5, hp: 3300, scale: 1.5, dmg: 150, speed: 16 },
+];
+
+// Mission waves: list of kaiju categories per wave.
+export const WAVES = [
+  [1],
+  [2],
+  [2, 1],
+  [3, 2],
+  [4],
+  [3, 3],
+  [5],
+];
+
+export const BACKUP = {
+  drones: { key: 'Q', name: 'Drones', cooldown: 8 },
+  apache: { key: '1', name: 'Apaches', cooldown: 40 },
+  gunship: { key: '2', name: 'Gunship', cooldown: 55 },
+  jets: { key: '3', name: 'Airstrike', cooldown: 70 },
+};
+
+export function rateBuild(cfg) {
+  // Returns a 0-100 "navigator score" and the reasons behind it.
+  const f = FRAMES[cfg.frame];
+  const L = WEAPONS[cfg.left], R = WEAPONS[cfg.right];
+  let score = 60;
+  const notes = [];
+  const melee = [L, R].filter((w) => w.kind === 'melee').length;
+  const ranged = 2 - melee;
+  if (melee === 1 && ranged === 1) { score += 18; notes.push('One melee + one ranged weapon covers close and far fights.'); }
+  if (ranged === 2) { score -= 6; notes.push('Two cannons hit weak spots from far, but kaiju that get close will hurt.'); }
+  if (melee === 2) { score += 4; notes.push('Two melee weapons do huge damage, but you have to get right up close.'); }
+  if (cfg.left === 'sword' || cfg.right === 'sword') { score += 8; notes.push('The Energy Sword has the best damage per hit.'); }
+  if (cfg.left === cfg.right) { score -= 4; notes.push('Matching weapons look cool, but mixing gives you more options.'); }
+  if (f.id === 'titan' && melee >= 1) { score += 8; notes.push('Titan frame + melee = heavy hits that stagger big kaiju.'); }
+  if (f.id === 'scout' && ranged >= 1) { score += 8; notes.push('Scout speed + cannon lets you strike and run.'); }
+  if (f.id === 'scout' && melee === 2) { score -= 6; notes.push('Scouts have thin armor. Getting close with two blades is risky.'); }
+  if (f.id === 'ranger') { score += 4; notes.push('Ranger frame is a solid all-rounder.'); }
+  if (cfg.left === 'fist' || cfg.right === 'fist') notes.push('Power Fist knocks kaiju back and smashes buildings flat.');
+  return { score: Math.max(10, Math.min(100, score)), notes };
+}

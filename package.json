@@ -1,0 +1,30 @@
+{
+  "name": "kaiju-battle-simulator",
+  "version": "1.0.0",
+  "description": "Kaiju Battle Simulator - a 3D Jaeger vs Kaiju browser game by Patrick",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarissaFamularo/kaiju-battle-simulator.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MarissaFamularo/kaiju-battle-simulator/issues"
+  },
+  "homepage": "https://github.com/MarissaFamularo/kaiju-battle-simulator#readme",
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.21.0",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.1",
+    "vite": "^8.3.4"
+  },
+  "private": true,
+  "type": "module"
+}

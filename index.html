@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kaiju Battle Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Loading -->
+  <div id="loading" class="screen show">
+    <div class="load-box">
+      <div class="logo small">KAIJU BATTLE SIMULATOR</div>
+      <div class="load-bar"><div id="load-fill"></div></div>
+      <div id="load-text">Building the city...</div>
+    </div>
+  </div>
+
+  <!-- Title -->
+  <div id="title" class="screen">
+    <div class="title-wrap">
+      <div class="logo">KAIJU<br /><span>BATTLE SIMULATOR</span></div>
+      <div class="byline">A game by Patrick</div>
+      <button id="btn-start" class="btn big">START</button>
+      <div class="title-hint">Best with a mouse and keyboard. Turn your sound on!</div>
+    </div>
+  </div>
+
+  <!-- Hangar / Jaeger builder -->
+  <div id="hangar" class="screen">
+    <div class="hg-header">
+      <div class="hg-title">JAEGER HANGAR</div>
+      <div class="hg-sub">Build your Jaeger, pilot</div>
+    </div>
+    <div id="hg-left" class="panel">
+      <label class="lbl">JAEGER NAME</label>
+      <input id="hg-name" maxlength="18" spellcheck="false" />
+      <label class="lbl">FRAME</label>
+      <div id="hg-frame" class="opts"></div>
+      <label class="lbl">LEFT ARM <span class="key">LEFT CLICK</span></label>
+      <div id="hg-left-w" class="opts"></div>
+      <label class="lbl">RIGHT ARM <span class="key">RIGHT CLICK</span></label>
+      <div id="hg-right-w" class="opts"></div>
+      <label class="lbl">HEAD</label>
+      <div id="hg-head" class="opts"></div>
+    </div>
+    <div id="hg-right" class="panel">
+      <label class="lbl">PAINT</label>
+      <div class="sw-row"><span>Main</span><div id="hg-primary" class="swatches"></div></div>
+      <div class="sw-row"><span>Trim</span><div id="hg-accent" class="swatches"></div></div>
+      <div class="sw-row"><span>Energy</span><div id="hg-glow" class="swatches"></div></div>
+      <label class="lbl">STATS</label>
+      <div id="hg-stats"></div>
+      <label class="lbl">NAVIGATOR BUILD RATING</label>
+      <div id="hg-rating"><div id="hg-rating-fill"></div><span id="hg-rating-num"></span></div>
+      <div id="hg-tips"></div>
+    </div>
+    <div id="hg-bottom">
+      <div class="opts compact" id="hg-mode"></div>
+      <div class="opts compact" id="hg-settings"></div>
+      <button id="btn-launch" class="btn big">LAUNCH</button>
+    </div>
+  </div>
+
+  <!-- Drop sequence title card -->
+  <div id="cine" class="screen">
+    <div id="cine-bars"><div class="bar top"></div><div class="bar bottom"></div></div>
+    <div id="cine-title"></div>
+    <div id="cine-skip">SPACE to skip</div>
+  </div>
+
+  <!-- In-game HUD -->
+  <div id="hud" class="screen">
+    <div id="hud-status" class="hud-box">
+      <div id="hud-name">JAEGER</div>
+      <div class="bar-row"><span>ARMOR</span><div class="bar"><div id="hud-hp"></div></div></div>
+      <div class="bar-row"><span>BOOST</span><div class="bar thin"><div id="hud-energy"></div></div></div>
+      <div id="hud-pilot-row" class="bar-row hidden"><span>PILOT</span><div class="bar"><div id="hud-pilot"></div></div></div>
+    </div>
+    <div id="hud-top">
+      <div id="hud-wave">WAVE 1</div>
+      <div class="bar-row plant"><span>POWER PLANT</span><div class="bar"><div id="hud-plant"></div></div></div>
+      <div id="hud-alert"></div>
+    </div>
+    <div id="hud-kaiju" class="hidden">
+      <div id="hud-kaiju-name"></div>
+      <div class="bar big"><div id="hud-kaiju-hp"></div></div>
+    </div>
+    <canvas id="radar" width="200" height="200"></canvas>
+    <div id="hud-score"></div>
+    <div id="abilities"></div>
+    <div id="crosshair"><div></div></div>
+    <div id="markers"></div>
+    <div id="dmgnums"></div>
+    <div id="vignette"></div>
+    <div id="hud-hint"></div>
+  </div>
+
+  <!-- Navigator (shared by hangar, drop and battle) -->
+  <div id="nav" class="hidden">
+    <div id="nav-face">
+      <svg viewBox="0 0 64 64" width="56" height="56">
+        <defs><linearGradient id="vg" x1="0" x2="1"><stop offset="0" stop-color="#38d8ff"/><stop offset="1" stop-color="#1a6aff"/></linearGradient></defs>
+        <circle cx="32" cy="30" r="22" fill="#2a3442" stroke="#8fa4bd" stroke-width="2"/>
+        <rect x="16" y="22" width="32" height="12" rx="6" fill="url(#vg)"/>
+        <rect x="12" y="50" width="40" height="12" rx="4" fill="#2a3442" stroke="#8fa4bd" stroke-width="2"/>
+        <circle cx="50" cy="40" r="3" fill="#ff5a3a"/>
+      </svg>
+    </div>
+    <div id="nav-body">
+      <div id="nav-name">NAVIGATOR NOVA</div>
+      <div id="nav-text"></div>
+    </div>
+  </div>
+
+  <!-- Pause -->
+  <div id="pause" class="screen">
+    <div class="menu">
+      <div class="menu-title">PAUSED</div>
+      <button id="btn-resume" class="btn">RESUME</button>
+      <button id="btn-quit" class="btn ghost">BACK TO HANGAR</button>
+      <div class="controls">
+        <div><b>W A S D</b> Walk</div>
+        <div><b>MOUSE</b> Look / aim</div>
+        <div><b>LEFT CLICK</b> Left weapon</div>
+        <div><b>RIGHT CLICK</b> Right weapon</div>
+        <div><b>SHIFT</b> Sprint</div>
+        <div><b>SPACE</b> Jump + stomp</div>
+        <div><b>Q</b> Send drones</div>
+        <div><b>1</b> Apache helicopters</div>
+        <div><b>2</b> Gunship</div>
+        <div><b>3</b> Jet airstrike</div>
+        <div><b>F</b> Get out / back in</div>
+        <div><b>V</b> Navigator voice on/off</div>
+        <div><b>ESC</b> Pause</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- End screen -->
+  <div id="end" class="screen">
+    <div class="menu wide">
+      <div id="end-title" class="menu-title">VICTORY</div>
+      <div id="end-sub"></div>
+      <div id="end-stats"></div>
+      <div class="row">
+        <button id="btn-again" class="btn">PLAY AGAIN</button>
+        <button id="btn-endless" class="btn">KEEP FIGHTING</button>
+        <button id="btn-hangar" class="btn ghost">HANGAR</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
