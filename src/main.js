@@ -123,7 +123,7 @@ class App {
       audio.play('uiBig');
       this.launch();
     };
-    $('btn-resume').onclick = () => this.resume();
+    $('btn-resume').onclick = () => this.resume(true);
     $('btn-quit').onclick = () => { show('pause', false); this.game.stop(); this.toHangar(); };
     $('btn-again').onclick = () => { show('end', false); this.game.stop(); this.launch(); };
     $('btn-hangar').onclick = () => { show('end', false); this.game.stop(); this.toHangar(); };
@@ -132,7 +132,7 @@ class App {
       this.game.continueEndless();
       this.state = 'play';
       this.input.enabled = true;
-      this.input.lock();
+      this.input.lock(true);
     };
   }
 
@@ -173,6 +173,7 @@ class App {
       return;
     }
     if (locked) { this.hud.hint(''); return; }
+    // lost the mouse during battle (Esc) -> pause
     if (this.state === 'play' && !this.game.over) this.pause();
   }
 
@@ -182,16 +183,17 @@ class App {
     audio.stopLoops();
   }
 
-  resume() {
+  resume(fromClick = false) {
     show('pause', false);
     this.state = 'play';
-    this.input.lock();
+    this.input.lock(fromClick);
+    if (!this.input.locked && !this.input.fallbackLook) this.hud.hint('CLICK TO CONTROL YOUR JAEGER');
     this.clock.getDelta();
   }
 
   onKey(e) {
     if (this.state === 'drop' && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) this.drop.skip();
-    if (this.state === 'play' && e.code === 'Escape' && this.input.fallbackLook) this.pause();
+    if (this.state === 'play' && e.code === 'Escape' && !this.input.locked) this.pause();
     else if (this.state === 'paused' && e.code === 'Escape' && !this.input.locked) this.resume();
   }
 

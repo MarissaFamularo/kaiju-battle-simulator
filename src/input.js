@@ -25,7 +25,7 @@ export class Input {
     window.addEventListener('blur', () => { this.keys.clear(); this.buttons.clear(); });
     el.addEventListener('mousedown', (e) => {
       if (!this.enabled) return;
-      if (!this.locked && !this.fallbackLook) { this.lock(); return; }
+      if (!this.locked && !this.fallbackLook) { this.lock(true); return; }
       this.buttons.add(e.button);
       this.justClicked.add(e.button);
     });
@@ -43,20 +43,30 @@ export class Input {
       this.locked = document.pointerLockElement === el;
       if (this.onLockChange) this.onLockChange(this.locked);
     });
-    document.addEventListener('pointerlockerror', () => {
-      // e.g. sandboxed iframe: steer by mouse position instead
-      this.fallbackLook = true;
-      if (this.onLockChange) this.onLockChange(false, true);
-    });
+    document.addEventListener('pointerlockerror', () => this.lockFailed());
+    this.gestureFails = 0;
   }
 
-  lock() {
-    if (this.fallbackLook) return;
+  // Browsers only grant pointer lock from a click. A failure from a click twice in a row
+  // means it is blocked (e.g. a sandboxed frame), so steer by mouse position instead.
+  lockFailed() {
+    if (!this.fromGesture) return;
+    this.fromGesture = false;
+    this.gestureFails++;
+    if (this.gestureFails >= 2 && !this.fallbackLook) {
+      this.fallbackLook = true;
+      if (this.onLockChange) this.onLockChange(false, true);
+    }
+  }
+
+  lock(fromGesture = false) {
+    if (this.fallbackLook || this.locked) return;
+    this.fromGesture = fromGesture;
     try {
       const p = this.el.requestPointerLock();
-      if (p && p.catch) p.catch(() => { this.fallbackLook = true; if (this.onLockChange) this.onLockChange(false, true); });
+      if (p && p.then) p.then(() => { this.gestureFails = 0; }, () => this.lockFailed());
     } catch (e) {
-      this.fallbackLook = true;
+      this.lockFailed();
     }
   }
 
