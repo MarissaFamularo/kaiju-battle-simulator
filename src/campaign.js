@@ -238,6 +238,72 @@ export const MISSIONS = [
     goal: () => 'Destroy the Boss Pod: Overlord',
     done: (g) => beaten(g, 'overlord') >= 1,
     failed: () => null,
-    win: 'THE OVERLORD IS DESTROYED! Every Boss Pod is beaten. The Earth is safe, and you are the greatest Jaeger pilot there is!',
+    win: 'THE OVERLORD IS DESTROYED! Every Boss Pod is beaten. Now the Earth Cannon is ready to fire at the enemy planet!',
+    ending: 'planet',   // plays the ending scene: the laser, the planet, the fleet
+  },
+  // ------------------------------------------------------------------ PART 3: THE FLEET
+  // Patrick, 2026-11-27: "All the tripods used to be asleep but now they are awake, so the ships are in
+  // orbit and are entering the atmosphere and are sending more and more ships. But it took years for the
+  // ships to get to Earth, so humans are now a type three race, so more weapons. Now all weapons are from
+  // the future, so all weapons can hurt tripods." The missions themselves are Claude's calls.
+  {
+    title: 'Years Later',
+    part: 3,
+    brief: 'Part 3! The fleet took years to reach the Earth. In that time humans became a Type Three civilization and invented weapons from the future: every weapon can hurt every tripod now, and there are three new ones in the hangar. The ships are in orbit. The first ones are coming down. Shoot down 2 ships, and every tripod they drop.',
+    start(g, s) { s.sent = 1; g.queueShip(['attacker', 'attacker']); },
+    tick(g, s) { if (s.sent < 2 && beaten(g, 'ship') >= 1) { s.sent++; g.queueShip(['sprinter', 'shield']); } },
+    goal: (g) => (beaten(g, 'ship') >= 2 ? 'Destroy the tripods they dropped' : `Shoot down 2 alien ships (${Math.min(2, beaten(g, 'ship'))}/2)`),
+    done: (g) => beaten(g, 'ship') >= 2 && noneComing(g),
+    failed: () => null,
+    win: 'Two ships down! But look up: the sky is full of them.',
+  },
+  {
+    title: 'They Are All Awake',
+    part: 3, scouts: 3, scoutPower: 2,
+    brief: 'The tripods that were asleep underground have ALL woken up. No more lightning: six of them are already walking around the map. Hunt them down with your Scout Squadron. Destroy all 6.',
+    start(g, s) {
+      const types = ['attacker', 'attacker', 'sprinter', 'mortar', 'ghost', 'shield'];
+      const B = g.city.bound - 200;
+      types.forEach((type, i) => {
+        const a = (i / types.length) * 6.28 + Math.random() * 0.6, d = 550 + Math.random() * 500;
+        const x = Math.max(-B, Math.min(B, g.mech.pos.x + Math.cos(a) * d)), z = Math.max(g.city.waterEdge + 150, Math.min(B, g.mech.pos.z + Math.sin(a) * d));
+        g.spawnAwake(type, x, z);
+      });
+      s.sent = true;
+      g.hud.alert('6 TRIPODS ARE AWAKE', 4, true);
+    },
+    goal: (g) => `Hunt down the awake tripods (${Math.min(6, g.stats.tripods)}/6)`,
+    done: (g, s) => s.sent && g.stats.tripods >= 6 && noneComing(g),
+    failed: () => null,
+    win: 'All six hunted down. Nothing is asleep any more, and nothing got past you.',
+  },
+  {
+    title: 'More and More Ships',
+    part: 3, scouts: 2,
+    brief: 'They are sending more and more ships. First one, then two, then three at once. Shoot them all down, and everything they drop.',
+    start(g, s) { s.wave = 0; s.wait = 0; },
+    tick(g, s, dt) {
+      if (s.wave >= 3 || !noneComing(g)) return;
+      s.wait -= dt;
+      if (s.wait > 0) return;
+      s.wave++; s.wait = 6;
+      const cargo = [['attacker', 'sprinter'], ['attacker', 'mortar'], ['shield', 'splitter']];
+      for (let i = 0; i < s.wave; i++) g.queueShip(cargo[i]);
+      g.hud.alert(`WAVE ${s.wave} OF 3: ${s.wave} SHIP${s.wave > 1 ? 'S' : ''}`, 4, true);
+    },
+    goal: (g, s) => `Shoot down every ship: wave ${Math.max(1, s.wave || 1)}/3 (${beaten(g, 'ship')}/6 ships)`,
+    done: (g, s) => s.wave >= 3 && beaten(g, 'ship') >= 6 && noneComing(g),
+    failed: () => null,
+    win: 'Six ships shot down! But something huge just moved in front of the moon.',
+  },
+  {
+    title: 'The Mothership',
+    part: 3, scouts: 3,   // normal-strength scouts, so the Mothership is yours to shoot down
+    brief: 'The Mothership is coming down. It is the biggest ship in the fleet and it is full of tripods. Aim for the glowing core underneath it. Bring it down, and destroy everything it drops!',
+    start(g, s) { g.queueShip(['attacker', 'sprinter', 'shield', 'mortar', 'splitter', 'stormking'], 'mothership'); s.sent = true; },
+    goal: (g) => (beaten(g, 'mothership') ? 'Destroy everything it dropped' : 'Shoot down the Mothership'),
+    done: (g, s) => s.sent && beaten(g, 'mothership') >= 1 && noneComing(g),
+    failed: () => null,
+    win: 'THE MOTHERSHIP IS DOWN! The fleet is pulling back. You did it, pilot. But more ships are still up there...',
   },
 ];

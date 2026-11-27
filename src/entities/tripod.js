@@ -204,7 +204,7 @@ function place(mesh, a, b) {
 }
 
 export class Tripod {
-  constructor(game, { type = 'attacker', x = 0, z = 0 }) {
+  constructor(game, { type = 'attacker', x = 0, z = 0, awake = false }) {
     this.game = game;
     this.isTripod = true;
     this.type = type;
@@ -262,13 +262,21 @@ export class Tripod {
       { p: new THREE.Vector3(), r: 4 * S, weak: false }, { p: new THREE.Vector3(), r: 4 * S, weak: false }, { p: new THREE.Vector3(), r: 4 * S, weak: false }, // knees (bigger on the tall types, so a sword can reach something)
     ];
     this.body = game.physics.kinematicBall(x, -60, z, 12);
-    // break out of the ground
-    const p = this.pos.clone().setY(this.pos.y + 4);
-    game.city.damageArea(p, 40, 99999, { source: 'tripod', force: 2.2 });
-    game.fx.explosion(p, 1.2);
-    game.fx.groundDust(p, 80, 40);
-    game.city.impulseDebris(p, 100, 50);
-    audio.play('rumble', p, 1);
+    if (awake) {
+      // part 3: dropped from a ship or already walking around, so no climbing out of the ground
+      this.emerging = false; this.bodyY = this.stand; this.state = 'boot';
+      for (let k = 0; k < 3; k++) { this.restFoot(k, this.feet[k].pos); this.feet[k].planted = true; }
+      game.fx.groundDust(this.pos.clone().setY(this.pos.y + 3), 60, 30);
+      audio.play('stomp', this.pos, 1);
+    } else {
+      // break out of the ground
+      const p = this.pos.clone().setY(this.pos.y + 4);
+      game.city.damageArea(p, 40, 99999, { source: 'tripod', force: 2.2 });
+      game.fx.explosion(p, 1.2);
+      game.fx.groundDust(p, 80, 40);
+      game.city.impulseDebris(p, 100, 50);
+      audio.play('rumble', p, 1);
+    }
     this.pose(0);
   }
 
@@ -879,7 +887,7 @@ export class Tripod {
   takeDamage(amount, point, dir, opts = {}) {
     if (this.dead || this.emerging) return;
     const g = this.game;
-    if (this.spec.immune && opts.weapon !== 'sword' && opts.weapon !== 'laser') {
+    if (this.spec.immune && !g.future && opts.weapon !== 'sword' && opts.weapon !== 'laser') { // (in the future, every weapon gets through)
       // only the Energy Sword and Laser Blaster get through
       amount *= this.spec.chip || 0; // the Emperor Pod lets a little through; the Uber Pod none
       this.heatMark(point);

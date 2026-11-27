@@ -16,6 +16,7 @@ import { Camps } from './entities/camps.js';
 import { MISSIONS, unlockMission } from './campaign.js';
 import { SpawnMenu } from './ui/spawnMenu.js';
 import { Scouts } from './entities/scouts.js';
+import { AlienShip } from './entities/ship.js';
 import { TRIPODS } from './config.js';
 import { audio } from './audio.js';
 
@@ -91,6 +92,8 @@ export class Game {
     this.missionIdx = Math.max(0, Math.min(MISSIONS.length - 1, missionIdx || 0));
     this.mission = mode === 'campaign' ? MISSIONS[this.missionIdx] : null;
     this.ms = { t: 0, started: false, s: {}, gaveLaser: false };
+    // Part 3: all weapons are from the future, so every weapon can hurt every tripod. The old rule only holds in the part 1 and 2 story missions.
+    this.future = mode !== 'campaign' || (this.mission && this.mission.part === 3);
     if (this.mission && this.mission.needsSpecial && !['sword', 'laser'].includes(cfg.left) && !['sword', 'laser'].includes(cfg.right)) {
       cfg.right = 'laser'; // nothing else can hurt an Uber Pod or the Emperor Pod
       this.ms.gaveLaser = true;
@@ -127,6 +130,7 @@ export class Game {
     this.attacked = false;
     audio.intensity = 0.2;
     this.clouds();
+    if (this.mission && this.mission.part === 3) this.skyFleet();
     if (grounded) this.startGrounded();
   }
 
@@ -138,6 +142,42 @@ export class Game {
     this.carrier.g.visible = false;
     this.camPivot.copy(m.pos).add(new THREE.Vector3(0, CAM.height * m.scale, 0));
     this.beginPlay();
+  }
+
+  // Part 3: hundreds of ships in orbit, seen from the ground as lights high in the sky
+  skyFleet() {
+    const n = 500, pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * 6.28, r = 600 + Math.random() * 7000;
+      pos.set([Math.cos(a) * r, 2600 + Math.random() * 2600, Math.sin(a) * r], i * 3);
+    }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ff6a3a', size: 3.2, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.9, depthWrite: false }));
+    pts.frustumCulled = false;
+    this.scene.add(pts);
+  }
+
+  // An alien ship comes down out of the sky and hovers near you, dropping tripods that are already awake.
+  queueShip(cargo = ['attacker', 'attacker'], type = 'ship') {
+    const ref = this.pilot && !this.pilot.dead ? this.pilot.pos : (this.mech ? this.mech.pos : new THREE.Vector3());
+    const B = this.city.bound - 150;
+    const a = this.view.yaw + (Math.random() - 0.5) * 1.6, d = 330 + Math.random() * 170;
+    const x = THREE.MathUtils.clamp(ref.x + Math.sin(a) * d, -B, B), z = THREE.MathUtils.clamp(ref.z + Math.cos(a) * d, this.city.waterEdge + 120, B);
+    const ship = new AlienShip(this, { type, x, z, cargo });
+    this.kaijus.push(ship);
+    audio.play('alarm');
+    this.hud.alert(type === 'mothership' ? 'THE MOTHERSHIP IS ENTERING THE ATMOSPHERE' : 'ALIEN SHIP ENTERING THE ATMOSPHERE', 5, true);
+    this.nav.say(type === 'mothership' ? 'mothership' : 'shipWarn', type === 'mothership'
+      ? 'That is the Mothership! It is enormous, and it is full of tripods. Aim for the glowing core underneath it!'
+      : 'A ship is coming down out of orbit! Look up. It will drop tripods that are already awake. Shoot the glowing core underneath it!', 3, 0);
+    return ship;
+  }
+
+  // a tripod that is already awake and walking (part 3: nothing is asleep underground any more)
+  spawnAwake(type, x, z) {
+    const t = new Tripod(this, { type, x, z, awake: true });
+    this.kaijus.push(t);
+    return t;
   }
 
   clouds() {
@@ -275,7 +315,7 @@ export class Game {
     this.hud.alert(`${TRIPODS[w.type].name.toUpperCase()} RISING`, 4, true);
     if (w.type === 'harvester') this.nav.say('harvRise', `That is a Harvester! It is going after the survivor camps and the animals. Catch it before it gets there, and watch out for its legs: it stomps!`, 3, 0);
     else if (w.type === 'emperor') this.nav.say('emperorRise', `The Emperor Pod! It is taller than every other tripod. It has the Uber Pod's lasers AND the Harvester's cage, and it stomps. Only your Energy Sword or Laser Blaster can hurt it!`, 3, 0);
-    else if (w.type === 'uber') this.nav.say('uberRise', `An Uber Pod! Look at the size of it. Stacked lasers and long legs. Remember: only your Energy Sword or Laser Blaster can hurt it!`, 3, 0);
+    else if (w.type === 'uber') this.nav.say('uberRise', this.future ? `An Uber Pod! Look at the size of it. Stacked lasers and long legs. Good thing your weapons are from the future: they all hurt it now!` : `An Uber Pod! Look at the size of it. Stacked lasers and long legs. Remember: only your Energy Sword or Laser Blaster can hurt it!`, 3, 0);
     else if (TRIPODS[w.type].intro) this.nav.say('rise_' + w.type, TRIPODS[w.type].intro, 3, 0);
     else this.nav.say('tripodRise', `A tripod! Legs first, then it pushes itself up. That is ${t.name}. It can only attack if its scanner light finds you. Its weak spot is the glowing core underneath.`, 3, 0);
     return t;
@@ -940,7 +980,7 @@ export class Game {
       kills: this.stats.kills,
       tripods: this.stats.tripods,
       saved: this.camps ? this.camps.saved : null,
-      campaign: this.mission ? { n: this.missionIdx + 1, title: this.mission.title, last: this.missionIdx >= MISSIONS.length - 1 } : null,
+      campaign: this.mission ? { n: this.missionIdx + 1, title: this.mission.title, last: this.missionIdx >= MISSIONS.length - 1, ending: this.mission.ending } : null,
       weak: this.stats.weakHits,
       buildings: this.city.destroyed,
       damage: Math.round(this.stats.damage),

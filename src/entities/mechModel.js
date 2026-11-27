@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { makePanelTexture } from '../world/textures.js';
 import { mergeStatic } from '../util/merge.js';
+import { WEAPONS } from '../config.js';
 
 let panelTex = null;
 const geoCache = new Map();
@@ -165,7 +166,8 @@ export function buildMech(cfg) {
     const hand = new THREE.Group(); hand.position.y = -13;
     el.add(hand);
     weapons[key] = wid;
-    if (wid === 'laser') {
+    const look = (WEAPONS[wid] && WEAPONS[wid].model) || wid; // future weapons reuse the laser or cannon arm
+    if (look === 'laser') {
       // Laser Blaster: twin barrels with glowing red tips
       const red = mats.laser || (mats.laser = new THREE.MeshStandardMaterial({ color: '#000', emissive: '#ff3020', emissiveIntensity: 3 }));
       hand.add(M(rbox(6, 3, 6.4, 1), mats.accent, 0, -1.5, 0));
@@ -176,7 +178,7 @@ export function buildMech(cfg) {
       hand.add(M(rbox(1, 6, 1.4, 0.3), red, 0, -6, 3));
       const mz = new THREE.Object3D(); mz.position.y = -11.5; hand.add(mz);
       muzzle[key] = mz;
-    } else if (wid === 'cannon') {
+    } else if (look === 'cannon') {
       const barrel = M(new THREE.CylinderGeometry(2.4, 3, 9, 16), mats.dark, 0, -3.5, 0);
       hand.add(barrel);
       hand.add(M(new THREE.CylinderGeometry(3.2, 3.2, 2, 16), mats.accent, 0, -1, 0));

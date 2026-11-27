@@ -26,6 +26,8 @@ function samplePose(keys, t) {
 const _v = new THREE.Vector3();
 const _w = new THREE.Vector3();
 
+const _up = new THREE.Vector3(0, 1, 0);
+
 export class Mech {
   constructor(game, cfg) {
     this.game = game;
@@ -280,15 +282,21 @@ export class Mech {
     // keep projectiles from spawning inside a building we're hugging
     const aim = g.aimPoint.clone();
     const dir = aim.sub(from).normalize();
-    const laser = a.w.id === 'laser';
-    const color = laser ? '#ff3020' : this.cfg.glow;
-    g.projectiles.fire({
-      pos: from, dir, speed: a.w.speed, damage: a.w.damage * this.frame.power, owner: 'player', weapon: a.w.id,
-      color, size: laser ? 8 : 12, smash: a.w.smash, radius: laser ? 4.5 : 6,
-    });
+    const w = a.w;
+    const laser = (w.model || w.id) === 'laser';
+    const color = w.color || (laser ? '#ff3020' : this.cfg.glow);
+    const n = w.shots || 1;
+    for (let i = 0; i < n; i++) {
+      const d = dir.clone();
+      if (n > 1) d.applyAxisAngle(_up, (i - (n - 1) / 2) * w.spread).normalize(); // a flat fan
+      g.projectiles.fire({
+        pos: from, dir: d, speed: w.speed, damage: w.damage * this.frame.power, owner: 'player', weapon: w.id,
+        color, size: w.size || (laser ? 8 : 12), smash: w.smash, radius: w.radius || (laser ? 4.5 : 6), boom: w.boom || 0,
+      });
+    }
     g.fx.glow(from, color, laser ? 34 : 60, 0.12);
     if (!laser) g.fx.flash(from, color, 2500, 0.15);
-    audio.play(laser ? 'laser' : 'plasma', this.pos, 0.9);
+    audio.play(laser ? 'laser' : 'plasma', this.pos, w.id === 'pulse' ? 0.5 : 0.9);
   }
 
   updateArm(key, dt, view, time) {

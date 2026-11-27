@@ -173,7 +173,7 @@ export class Kaiju {
     }
     // kaiju and tripods fight each other
     for (const t of g.kaijus) {
-      if (!t.isTripod || t.dead || t.emerging) continue;
+      if (!t.isTripod || t.isShip || t.dead || t.emerging) continue; // kaiju cannot reach a ship
       const d = t.pos.distanceTo(this.pos);
       if (d < 320) cands.push({ kind: 'tripod', ent: t, pos: t.pos, radius: t.radius, score: d * 0.9 });
     }
@@ -351,7 +351,7 @@ export class Kaiju {
       if (u.pos.distanceTo(center) < radius + 25) u.destroy(true);
     }
     for (const t of g.kaijus) {
-      if (!t.isTripod || t.dead || t.emerging) continue;
+      if (!t.isTripod || t.isShip || t.dead || t.emerging) continue; // kaiju cannot reach a ship
       if (Math.hypot(t.pos.x - center.x, t.pos.z - center.z) < radius + t.radius + 14) t.takeDamage(dmg * 1.6, t.hitCache[0].p.clone(), f, { source: 'kaiju', knockback: 30 });
     }
     if (T && T.kind === 'plant' && T.ent.alive) {

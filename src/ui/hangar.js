@@ -167,7 +167,7 @@ export class Hangar {
       this.navTip(k, v);
     };
     this.opt('hg-frame', Object.values(FRAMES).map((f) => ({ id: f.id, label: f.name, title: f.desc })), cfg.frame, set('frame'));
-    const wl = Object.values(WEAPONS).map((w) => ({ id: w.id, label: w.name, title: w.desc }));
+    const wl = Object.values(WEAPONS).map((w) => ({ id: w.id, label: w.name, sub: w.future ? 'future' : undefined, title: w.desc }));
     this.opt('hg-left-w', wl, cfg.left, set('left'));
     this.opt('hg-right-w', wl, cfg.right, set('right'));
     this.opt('hg-head', Object.values(HEADS).map((h) => ({ id: h.id, label: h.name, title: h.desc || '' })), cfg.head, set('head'));

@@ -101,7 +101,7 @@ export class Scouts {
       goal = T.pos; stop = SHOOT * 0.8 + (T.radius || 10);
       const d = Math.hypot(T.pos.x - s.pos.x, T.pos.z - s.pos.z);
       // enemies that get right on top of a scout hurt it
-      if (d < (T.radius || 10) + 46) this.hurt(s, 30 * dt, T.pos);
+      if (!T.isShip && d < (T.radius || 10) + 46) this.hurt(s, 30 * dt, T.pos);
       if (d < SHOOT + (T.radius || 10) + 40) {
         const want = Math.atan2(T.pos.x - s.pos.x, T.pos.z - s.pos.z);
         let dy = want - s.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));

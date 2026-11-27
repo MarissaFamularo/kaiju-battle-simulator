@@ -53,6 +53,26 @@ export const WEAPONS = {
   },
 };
 
+// Weapons from the future (campaign part 3, Patrick 2026-11-27): the ships took years to reach the Earth,
+// so humans had time to invent these. `model` says which arm shape it uses. Claude's calls.
+Object.assign(WEAPONS, {
+  nova: {
+    id: 'nova', name: 'Nova Cannon', kind: 'ranged', model: 'cannon', future: true,
+    desc: 'FUTURE WEAPON. One huge golden blast that explodes. Slow to fire, giant damage.',
+    damage: 120, cooldown: 1.3, speed: 400, smash: 2.5, color: '#ffd84a', size: 22, radius: 9, boom: 1.1,
+  },
+  pulse: {
+    id: 'pulse', name: 'Pulse Rifle', kind: 'ranged', model: 'laser', future: true,
+    desc: 'FUTURE WEAPON. A stream of green bolts, faster than anything else.',
+    damage: 11, cooldown: 0.09, speed: 900, smash: 0.4, color: '#7dffb0', size: 7, radius: 4,
+  },
+  storm: {
+    id: 'storm', name: 'Storm Launcher', kind: 'ranged', model: 'cannon', future: true,
+    desc: 'FUTURE WEAPON. Fires three purple bolts in a fan. Great against Sprinters.',
+    damage: 30, cooldown: 0.7, speed: 520, smash: 1.0, color: '#b07dff', size: 12, radius: 6, shots: 3, spread: 0.07,
+  },
+});
+
 export const HEADS = {
   visor: { id: 'visor', name: 'Visor' },
   dome: { id: 'dome', name: 'Dome' },

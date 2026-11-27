@@ -132,6 +132,23 @@ Patrick can rename or change any of them.
   28 seconds: the Earth Cannon charges, fires, the planet blows apart, 420 ships fly past, and a
   "PART 3 BEGINS" card. Part 3 itself is not designed yet: that is Patrick's to describe.
 
+## Part 3: The Fleet
+
+Patrick, 2026-11-27, in his words: **"All the tripods used to be asleep but now they are awake, so the
+ships are in orbit and are entering the atmosphere and are sending more and more ships. But it took years
+for the ships to get to Earth, so humans are now a type three race, so more weapons. Now all weapons are
+from the future, so all weapons can hurt tripods."** Plus (as best we could read it) more campaign.
+
+Built the same day. **Claude's calls:**
+- **Every weapon hurts every tripod** in Part 3 missions and in all the non-story modes. The Uber Pod's
+  immunity still holds in the Part 1 and 2 story missions, where it is the point of the mission.
+- **Three future weapons** in the hangar: Nova Cannon, Pulse Rifle, Storm Launcher.
+- **Alien Dropships** come down out of orbit, hover, and drop tripods that are **already awake** (no
+  lightning, no climbing out). Weak spot: the glowing core underneath. **The Mothership** is the big one.
+- The sky in Part 3 is full of orange lights: the fleet in orbit.
+- Missions 16 to 19: Years Later, They Are All Awake, More and More Ships, The Mothership.
+- Code: `src/entities/ship.js`, `WEAPONS` in `src/config.js`, `src/campaign.js`.
+
 ## Build order
 
 1. **(Built 2026-11-27.) Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,
