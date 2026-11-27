@@ -620,7 +620,8 @@ export class Tripod {
       this.fireBig(tp, T);
     } else if (this.spec.mortar && this.fireCd <= 0 && this.los && dist < 620) {
       this.fireCd = this.spec.fireEvery + Math.random();
-      this.fireMortar(tp, T);
+      const n = this.spec.mortarCount || 1;
+      for (let i = 0; i < n; i++) this.fireMortar(n > 1 ? tp.clone().add(_a.set((Math.random() - 0.5) * 90, 0, (Math.random() - 0.5) * 90)) : tp, T);
     } else if (!this.spec.mortar && this.fireCd <= 0 && this.los && Math.abs(dy) < 0.5 && dist < 520) {
       this.burst = this.spec.minigun || 3; this.burstT = 0;
       this.fireCd = this.spec.fireEvery + Math.random() * 0.6;

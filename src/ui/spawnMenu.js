@@ -14,6 +14,11 @@ const CHOICES = [
   { id: 'mortar', label: 'Mortar Pod' },
   { id: 'ghost', label: 'Ghost Pod' },
   { id: 'splitter', label: 'Splitter Pod' },
+  { id: 'sprinterBoss', label: 'Boss Pod: Boss Sprinter' },
+  { id: 'shieldBoss', label: 'Boss Pod: Boss Shield' },
+  { id: 'mortarBoss', label: 'Boss Pod: Boss Mortar' },
+  { id: 'ghostBoss', label: 'Boss Pod: Boss Ghost' },
+  { id: 'splitterBoss', label: 'Boss Pod: Boss Splitter' },
   { id: 'stormking', label: 'Boss Pod: Storm King' },
   { id: 'overlord', label: 'Boss Pod: Overlord' },
 ];

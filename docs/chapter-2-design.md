@@ -118,6 +118,9 @@ Patrick can rename or change any of them.
 - **Splitter Pod**: when destroyed, two Sprinter Pods climb out of the wreck.
 - **Boss Pod: Storm King**: calls lightning down on you, with a blue warning ring first.
 - **Boss Pod: Overlord**: the biggest; shield, stomp, big laser, and it calls Sprinter Pods.
+- Patrick then asked for a boss pod "for each new pod": **Boss Sprinter, Boss Shield, Boss Mortar** (three
+  bombs at once), **Boss Ghost, Boss Splitter** (splits into two Splitters, which split into Sprinters).
+  Each one rises at the end of its pod's mission (10 to 14). Storm King and Overlord were kept as well.
 - Missions 9 to 15: Scout Squadron (scouts destroy tripods until the Boss Pod comes), Catch the
   Sprinters, Break the Shield, Fire From the Sky, Ghost Hunt, Double Trouble, The Overlord.
 

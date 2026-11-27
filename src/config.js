@@ -192,6 +192,25 @@ Object.assign(TRIPODS, {
   },
 });
 
+// A boss version of each new pod (Patrick, 2026-11-27: "one for each new pod"). Bigger, tougher, with spikes.
+Object.assign(TRIPODS, {
+  sprinterBoss: { ...TRIPODS.sprinter, id: 'sprinterBoss', name: 'Boss Pod: Boss Sprinter', short: 'Boss Sprinter', size: 1.3, hull: 1.25, boss: '#7dffb0', radar: 4,
+    hp: 1800, speed: 30, laser: 5, minigun: 5, fireEvery: 2.2, range: 420, lose: 10,
+    intro: 'A Boss Pod! The Boss Sprinter is as fast as the little ones, but big and tough. Cut it off instead of chasing it!' },
+  shieldBoss: { ...TRIPODS.shield, id: 'shieldBoss', name: 'Boss Pod: Boss Shield', short: 'Boss Shield', size: 1.6, hull: 1.5, boss: '#6fc0ff', radar: 4,
+    hp: 2200, speed: 14, shield: 700, shieldWait: 5, range: 420, lose: 10,
+    intro: 'A Boss Pod! The Boss Shield has a huge bubble. Do not stop shooting, or the bubble grows back!' },
+  mortarBoss: { ...TRIPODS.mortar, id: 'mortarBoss', name: 'Boss Pod: Boss Mortar', short: 'Boss Mortar', size: 1.6, hull: 1.6, boss: '#ffb04a', radar: 4,
+    hp: 2200, speed: 11, mortar: 22, mortarCount: 3, fireEvery: 5, range: 600, lose: 10,
+    intro: 'A Boss Pod! The Boss Mortar fires three fire bombs at once. Do not stand still!' },
+  ghostBoss: { ...TRIPODS.ghost, id: 'ghostBoss', name: 'Boss Pod: Boss Ghost', short: 'Boss Ghost', size: 1.5, hull: 1.4, boss: '#c9a0ff', radar: 4,
+    hp: 2000, speed: 19, laser: 6, minigun: 5, fireEvery: 2.8, range: 420, lose: 5,   // it loses you fast and vanishes again
+    intro: 'A Boss Pod! The Boss Ghost is huge, but you still cannot see it until it attacks. If it loses you, it disappears again!' },
+  splitterBoss: { ...TRIPODS.splitter, id: 'splitterBoss', name: 'Boss Pod: Boss Splitter', short: 'Boss Splitter', size: 1.8, hull: 1.7, boss: '#fff07a', radar: 4,
+    hp: 2400, speed: 14, range: 420, lose: 10, split: { type: 'splitter', n: 2 },
+    intro: 'A Boss Pod! The Boss Splitter splits into two Splitter Pods, and each of those splits into two Sprinters. That is seven pods in one!' },
+});
+
 // Invasion mode waves: numbers are kaiju categories, 'T' is an attacker tripod.
 export const INVASION_WAVES = [
   ['T'],

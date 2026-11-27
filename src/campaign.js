@@ -33,6 +33,26 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const beaten = (g, type) => g.stats.byType[type] || 0;                     // how many of this tripod type are destroyed
 const around = (g, type) => living(g, (k) => k.type === type).length + g.warnings.filter((w) => w.type === type).length;
 
+// Adds a boss fight to the end of a mission: when the mission's own goal is done, the boss version
+// of that pod rises, and the mission is won when the boss and everything it made are destroyed.
+function withBoss(m, boss, bossName) {
+  return {
+    ...m,
+    brief: `${m.brief} Then its Boss Pod shows up!`,
+    start(g, s) { s.bossSent = false; m.start(g, s); },
+    tick(g, s, dt) {
+      if (m.tick && !s.bossSent) m.tick(g, s, dt);
+      if (!s.bossSent && m.done(g, s)) {
+        s.bossSent = true;
+        g.hud.alert('A BOSS POD IS COMING!', 5, true);
+        g.queueTripod(boss, true);
+      }
+    },
+    goal: (g, s) => (s.bossSent ? (beaten(g, boss) ? 'Destroy everything that came out of it' : `Destroy the Boss Pod: ${bossName}`) : m.goal(g, s)),
+    done: (g, s) => s.bossSent && beaten(g, boss) >= 1 && noneComing(g),
+  };
+}
+
 export const MISSIONS = [
   {
     title: 'First Contact',
@@ -163,7 +183,7 @@ export const MISSIONS = [
     failed: () => null,
     win: 'The Storm King is down! Your squadron is cheering. But that was only the first Boss Pod.',
   },
-  {
+  withBoss({
     title: 'Catch the Sprinters',
     brief: 'A new tripod: the Sprinter Pod. Small, fast and hard to catch. Three of them are racing around. Destroy all 3.',
     start(g, s) { s.sent = 0; },
@@ -171,9 +191,9 @@ export const MISSIONS = [
     goal: (g) => `Destroy 3 Sprinter Pods (${Math.min(3, beaten(g, 'sprinter'))}/3)`,
     done: (g) => beaten(g, 'sprinter') >= 3,
     failed: () => null,
-    win: 'All three Sprinters caught! Nothing outruns you.',
-  },
-  {
+    win: 'All the Sprinters and the Boss Sprinter are caught! Nothing outruns you.',
+  }, 'sprinterBoss', 'Boss Sprinter'),
+  withBoss({
     title: 'Break the Shield',
     brief: 'A new tripod: the Shield Pod. A blue bubble soaks up your shots. Keep hitting until the bubble pops, then finish it before the bubble grows back. Destroy 2.',
     start(g, s) { s.sent = 1; g.queueTripod('shield', true); },
@@ -181,35 +201,35 @@ export const MISSIONS = [
     goal: (g) => `Destroy 2 Shield Pods (${Math.min(2, beaten(g, 'shield'))}/2)`,
     done: (g) => beaten(g, 'shield') >= 2,
     failed: () => null,
-    win: 'Two shields popped, two pods scrapped. Great shooting!',
-  },
-  {
+    win: 'Every shield popped, even the giant one. Great shooting!',
+  }, 'shieldBoss', 'Boss Shield'),
+  withBoss({
     title: 'Fire From the Sky',
     brief: 'A new tripod: the Mortar Pod. It stays far away and lobs slow fire bombs in a high arc. Watch the sky, keep moving, and get in close. Destroy 2.',
     start(g, s) { g.queueTripod('mortar'); g.queueTripod('mortar'); },
     goal: (g) => `Destroy 2 Mortar Pods (${Math.min(2, beaten(g, 'mortar'))}/2)`,
     done: (g) => beaten(g, 'mortar') >= 2,
     failed: () => null,
-    win: 'No more fire bombs! You got in close, just like a pro.',
-  },
-  {
+    win: 'No more fire bombs! Even the Boss Mortar could not hit you.',
+  }, 'mortarBoss', 'Boss Mortar'),
+  withBoss({
     title: 'Ghost Hunt',
     brief: 'A new tripod: the Ghost Pod. It is almost invisible and it hides from your radar. Look for its scanner light moving on the ground. Find and destroy 2.',
     start(g, s) { g.queueTripod('ghost', true); g.queueTripod('ghost', true); },
     goal: (g) => `Find and destroy 2 Ghost Pods (${Math.min(2, beaten(g, 'ghost'))}/2)`,
     done: (g) => beaten(g, 'ghost') >= 2,
     failed: () => null,
-    win: 'You found the ghosts! They cannot hide from you.',
-  },
-  {
+    win: 'You found every ghost, even the Boss Ghost. They cannot hide from you.',
+  }, 'ghostBoss', 'Boss Ghost'),
+  withBoss({
     title: 'Double Trouble',
     brief: 'A new tripod: the Splitter Pod. When you destroy it, two Sprinter Pods climb out of the wreck! Destroy the Splitter and both Sprinters.',
     start(g, s) { g.queueTripod('splitter', true); },
     goal: (g) => (beaten(g, 'splitter') ? `Destroy the Sprinters that came out (${Math.min(2, beaten(g, 'sprinter'))}/2)` : 'Destroy the Splitter Pod'),
     done: (g) => beaten(g, 'splitter') >= 1 && beaten(g, 'sprinter') >= 2,
     failed: () => null,
-    win: 'One pod, then two more, and you beat them all!',
-  },
+    win: 'One Boss Pod turned into seven pods, and you beat every one of them!',
+  }, 'splitterBoss', 'Boss Splitter'),
   {
     title: 'The Overlord',
     brief: 'The last and biggest Boss Pod: the Overlord. It has a shield, it stomps, it fires a big laser, and it calls Sprinter Pods to help. Your Scout Squadron is coming with you. Pop the shield and bring it down!',
