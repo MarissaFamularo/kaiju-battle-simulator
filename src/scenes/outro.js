@@ -94,7 +94,7 @@ export class Outro {
     this.mode = mode;
     this.enemy.material.color.set(mode === 'bomb' ? '#3a2a5a' : '#7a2438');
     this.card.innerHTML = mode === 'bomb'
-      ? '<div style="font-weight:900;font-size:min(8vw,76px);letter-spacing:.12em;text-shadow:0 0 30px #5affc0">THE PLANET WENT BOOM</div><div style="margin-top:18px;font-size:min(3vw,24px);letter-spacing:.3em;color:#9fffd8">YOU WON THE WAR. THE END.</div>'
+      ? '<div style="font-weight:900;font-size:min(8vw,76px);letter-spacing:.12em;text-shadow:0 0 30px #5affc0">THE PLANET WENT BOOM</div><div style="margin-top:18px;font-size:min(3vw,24px);letter-spacing:.3em;color:#9fffd8">BUT THE WAR IS NOT OVER... PART 6 IS COMING</div>'
       : '<div style="font-weight:900;font-size:min(9vw,84px);letter-spacing:.14em;text-shadow:0 0 30px #ff4a2a">PART 3 BEGINS</div><div style="margin-top:18px;font-size:min(3vw,24px);letter-spacing:.3em;color:#ff8a6a">THE FLEET IS COMING</div>';
     this.t = 0; this.beat = ''; this.active = true; this.t0 = (this.t0 || 0) + 1; // t0 counts the showings, so one-time beats fire again next time
     this.enemy.visible = true; this.chunks.visible = false; this.ships.visible = this.engines.visible = false;

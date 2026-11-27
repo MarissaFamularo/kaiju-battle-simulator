@@ -195,7 +195,10 @@ Built the same day. **Claude's calls:**
   They are scenery. The mechs that fight are your allies: Titan, Ranger and Scout Jaegers plus Guardian Walkers.
 - Missions 25 to 27: The Venture Stars (destroy 3 Shield Generators), Hold the Landing Zone, Plant the Bomb
   (carry it to the red beam, hold 6 seconds, run to the blue beam in 90 seconds).
-- **The ending**: the bomb counts down and the planet goes boom ("THE PLANET WENT BOOM. YOU WON THE WAR. THE END.").
+- **The ending**: the bomb counts down and the planet goes boom ("THE PLANET WENT BOOM. BUT THE WAR IS NOT
+  OVER... PART 6 IS COMING").
+- **Patrick's plan for the whole story (2026-11-27): "At part ten is when the war ends, but a lot more
+  stuff before part ten."** Parts 6 to 10 are not designed yet. Do not end the war before part 10.
 
 ## Build order
 
