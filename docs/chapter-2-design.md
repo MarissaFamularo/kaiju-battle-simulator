@@ -174,6 +174,10 @@ Built the same day. **Claude's calls:**
 - **The funny sneak-in** (`src/scenes/sneak.js`): the Jaeger tiptoes past a guard tripod in a terrible tripod
   costume, says BEEP BOOP, the costume falls off with a clang, the guard is asleep, the Jaeger runs.
 - **The Core**: the crater becomes a cave with the Core Reactor in it. Destroy it, then run back out in 80 seconds.
+- **The ending of part 4** (Patrick): "Could the end of the last mission be a message from the aliens, and it
+  says: we're still alive, our base is on another planet with a shield, we're coming." Built as
+  `src/scenes/alienMessage.js`: the four lines type out in green over their shielded planet, and a new
+  fleet lifts off.
 - Missions 20 to 24: The Link, Our Own Walkers, All-Out War, Into the Core, The Colossus.
 
 ## Build order

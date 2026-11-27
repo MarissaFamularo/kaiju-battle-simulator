@@ -407,6 +407,7 @@ export const MISSIONS = [
     goal: (g) => (beaten(g, 'colossus') ? 'Destroy the last tripods' : 'Bring down the Colossus Pod'),
     done: (g, s) => s.sent && beaten(g, 'colossus') >= 1 && noneComing(g),
     failed: () => null,
-    win: 'THE COLOSSUS HAS FALLEN! The war is over. Humans and kaiju saved their home together, and you led the way, pilot!',
+    win: 'THE COLOSSUS HAS FALLEN! Humans and kaiju saved their home together, and you led the way, pilot! Wait... we are picking up a signal.',
+    ending: 'message',   // plays the message from the aliens
   },
 ];
