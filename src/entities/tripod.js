@@ -737,9 +737,12 @@ export class Tripod {
     const g = this.game;
     if (this.spec.immune && opts.weapon !== 'sword' && opts.weapon !== 'laser') {
       // only the Energy Sword and Laser Blaster get through
-      amount = 0;
+      amount *= this.spec.chip || 0; // the Emperor Pod lets a little through; the Uber Pod none
       this.heatMark(point);
-      if (opts.source === 'mech' || opts.source === 'player') g.nav.say('uberImmune', 'That only left a red hot mark, and it is already cooling down! Only an Energy Sword or a Laser Blaster can hurt ' + (this.type === 'emperor' ? 'the Emperor Pod.' : 'an Uber Pod.'), 3, 20);
+      if (opts.source === 'mech' || opts.source === 'player') {
+        if (this.spec.chip) g.nav.say('emperorChip', 'Normal weapons only scratch the Emperor Pod. An Energy Sword or a Laser Blaster hits four times harder!', 3, 30);
+        else g.nav.say('uberImmune', 'That only left a red hot mark, and it is already cooling down! Only an Energy Sword or a Laser Blaster can hurt an Uber Pod.', 3, 20);
+      }
     }
     this.hp -= amount;
     this.hitFlash = 1;
