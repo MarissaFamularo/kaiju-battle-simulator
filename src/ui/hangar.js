@@ -196,7 +196,8 @@ export class Hangar {
     this.opt('hg-mode', [
       { id: 'mission', label: 'MISSION', sub: '7 waves' },
       { id: 'endless', label: 'ENDLESS', sub: 'no end' },
-      { id: 'smash', label: 'FREE SMASH', sub: 'K = kaiju' },
+      { id: 'smash', label: 'FREE SMASH', sub: 'K kaiju, T tripod' },
+      { id: 'invasion', label: 'INVASION', sub: 'tripods!' },
     ], st.mode, (v) => { st.mode = v; saveSettings(st); this.refreshUI(); });
     this.opt('hg-settings', [
       { id: 'voice', label: st.voice ? 'VOICE ON' : 'VOICE OFF' },

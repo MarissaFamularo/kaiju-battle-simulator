@@ -156,7 +156,7 @@ class App {
   startGame() {
     this.state = 'game';
     this.input.endFrame(); // the key that skipped the drop shouldn't also skip the landing
-    this.game.startMission({ ...this.hangar.cfg }, this.settings.mode);
+    this.game.startMission({ ...this.hangar.cfg }, this.hangar.settings.mode); // the hangar holds the mode you just picked
     this.nav.show(true);
   }
 
@@ -207,7 +207,7 @@ class App {
     $('end-title').textContent = win ? 'VICTORY' : s.title;
     $('end-sub').textContent = win ? `${this.hangar.cfg.name} saved the city!` : s.sub;
     $('end-stats').innerHTML = [
-      ['Kaiju defeated', s.kills], ['Weak spot hits', s.weak], ['Buildings smashed', s.buildings], ['Damage dealt', s.damage],
+      ['Kaiju defeated', s.kills - (s.tripods || 0)], ['Tripods destroyed', s.tripods || 0], ['Weak spot hits', s.weak], ['Buildings smashed', s.buildings], ['Damage dealt', s.damage],
       ['Waves reached', s.wave], ['Power plant', `${s.plant}%`], ['Battle time', s.time],
     ].map(([a, b]) => `<div>${a} <b>${b}</b></div>`).join('');
     $('btn-endless').style.display = win ? '' : 'none';

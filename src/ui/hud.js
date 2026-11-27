@@ -112,7 +112,7 @@ export class HUD {
     }
     this.kaiju.classList.toggle('hidden', !tk);
     if (tk) {
-      this.kName.textContent = `${tk.name.toUpperCase()}  ·  CATEGORY ${tk.cat}`;
+      this.kName.textContent = tk.isTripod ? `${tk.name.toUpperCase()}  ·  ${tk.spec.name.toUpperCase()}` : `${tk.name.toUpperCase()}  ·  CATEGORY ${tk.cat}`;
       this.kHp.style.width = `${(tk.hp / tk.maxHp) * 100}%`;
     }
 
@@ -208,9 +208,9 @@ export class HUD {
       const [wx, wy] = toR(w.zone.x, w.zone.z);
       const pr = (w.radius / range) * R;
       const a = 0.25 + Math.sin(g.time * 8) * 0.15;
-      c.fillStyle = `rgba(255,59,59,${a})`;
+      c.fillStyle = w.tripod ? `rgba(190,215,255,${a})` : `rgba(255,59,59,${a})`;
       c.beginPath(); c.arc(wx, wy, pr, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#ff3b3b'; c.font = 'bold 14px sans-serif'; c.fillText('?', wx, wy + 5);
+      c.fillStyle = w.tripod ? '#e6f0ff' : '#ff3b3b'; c.font = 'bold 14px sans-serif'; c.fillText(w.tripod ? '\u26A1' : '?', wx, wy + 5);
     }
     // aircraft
     c.fillStyle = '#5aff8a';
@@ -220,9 +220,12 @@ export class HUD {
       if (k.dead) continue;
       const [x, y] = toR(k.pos.x, k.pos.z);
       const r = 4 + k.cat;
-      c.fillStyle = k.emerging ? '#ff8a3a' : '#ff3b3b';
-      c.shadowColor = '#ff3b3b'; c.shadowBlur = 8;
-      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+      c.fillStyle = k.isTripod ? '#c77dff' : (k.emerging ? '#ff8a3a' : '#ff3b3b');
+      c.shadowColor = c.fillStyle; c.shadowBlur = 8;
+      c.beginPath();
+      if (k.isTripod) { c.moveTo(x, y - r - 2); c.lineTo(x + r + 1, y + r); c.lineTo(x - r - 1, y + r); c.closePath(); } // tripods are triangles
+      else c.arc(x, y, r, 0, Math.PI * 2);
+      c.fill();
       c.shadowBlur = 0;
     }
     // mech (when pilot is outside)

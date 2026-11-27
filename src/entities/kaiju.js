@@ -170,6 +170,12 @@ export class Kaiju {
       const d = u.pos.distanceTo(this.pos);
       if (d < 160) cands.push({ kind: 'air', ent: u, pos: u.pos, radius: 8, score: d * 1.5 });
     }
+    // kaiju and tripods fight each other
+    for (const t of g.kaijus) {
+      if (!t.isTripod || t.dead || t.emerging) continue;
+      const d = t.pos.distanceTo(this.pos);
+      if (d < 320) cands.push({ kind: 'tripod', ent: t, pos: t.pos, radius: t.radius, score: d * 0.9 });
+    }
     if (!cands.length) {
       // go for the power plant
       let best = null, bd = Infinity;
@@ -342,6 +348,10 @@ export class Kaiju {
     }
     for (const u of g.military.targets()) {
       if (u.pos.distanceTo(center) < radius + 25) u.destroy(true);
+    }
+    for (const t of g.kaijus) {
+      if (!t.isTripod || t.dead || t.emerging) continue;
+      if (Math.hypot(t.pos.x - center.x, t.pos.z - center.z) < radius + t.radius + 14) t.takeDamage(dmg * 1.6, t.hitCache[0].p.clone(), f, { source: 'kaiju', knockback: 30 });
     }
     if (T && T.kind === 'plant' && T.ent.alive) {
       const pt = new THREE.Vector3(THREE.MathUtils.clamp(center.x, T.ent.x - T.ent.hw, T.ent.x + T.ent.hw), Math.min(center.y, T.ent.h * 0.6), THREE.MathUtils.clamp(center.z, T.ent.z - T.ent.hd, T.ent.z + T.ent.hd));

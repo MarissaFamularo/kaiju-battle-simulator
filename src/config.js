@@ -111,6 +111,27 @@ export const BACKUP = {
   missiles: { key: 'E', name: 'Missiles', cooldown: 9 },
 };
 
+// Chapter 2 tripods (docs/chapter-2-design.md). Harvester and Uber Pod come later.
+export const TRIPODS = {
+  attacker: {
+    id: 'attacker', name: 'Attacker Tripod',
+    hp: 900, speed: 16,
+    laser: 8, fireEvery: 2.6,    // damage per laser bolt, seconds between 3-bolt bursts
+    range: 300, cone: 0.2,       // how far the scanner light reaches, and how wide it is (radians)
+  },
+};
+
+// Invasion mode waves: numbers are kaiju categories, 'T' is an attacker tripod.
+export const INVASION_WAVES = [
+  ['T'],
+  [1, 'T'],
+  ['T', 'T'],
+  [2, 'T'],
+  [3, 'T', 'T'],
+  [2, 2, 'T'],
+  [4, 'T', 'T'],
+];
+
 export function rateBuild(cfg) {
   // Returns a 0-100 "navigator score" and the reasons behind it.
   const f = FRAMES[cfg.frame];

@@ -26,6 +26,7 @@ A game by Patrick. Build your own Jaeger, drop from a space station into a big 3
 | F | Eject from the Jaeger / climb back in |
 | V | Navigator voice on/off |
 | K | Summon a kaiju (Free Smash mode) |
+| T | Summon a tripod (Free Smash mode) |
 | Esc | Pause |
 
 ### Weapons
@@ -46,6 +47,19 @@ A game by Patrick. Build your own Jaeger, drop from a space station into a big 3
 ### iPad / touch screens
 
 Touch controls turn on by themselves on touch screens (`public/touch-controls.js`). Left thumb is a joystick (push to the edge to sprint), right thumb drags to aim, and there are LEFT ARM, RIGHT ARM and JUMP buttons. The ability tiles at the bottom can be tapped. Force touch mode on or off with `?touch=1` or `?touch=0` in the URL. Hold the iPad sideways.
+
+### Chapter 2: the Tripod Invasion (in progress)
+
+Patrick's full design is in `docs/chapter-2-design.md`. Built so far:
+
+- **Attacker tripods.** Lightning hits one spot ahead of you over and over, then a tripod climbs out: legs first, then it pushes itself up. It walks on three legs.
+- **Scanner.** Its head has 5 lights and a scanner beam. It cannot attack until the light finds you, so hide behind buildings. When it spots you the lights turn red and it blasts a loud horn, then fires lasers. Break its line of sight for a few seconds and it loses you.
+- **Weak spot:** the glowing core underneath.
+- **Little aliens.** A tripod that spots you lobs a capsule. Little black aliens hop out, climb your Jaeger and pull armor off. Press F to get out and shoot them off with your blaster. They go splat.
+- **Kaiju and tripods fight each other.**
+- **INVASION mode** in the hangar mixes tripods and kaiju. In Free Smash, press **T** to call a tripod.
+
+Still to come: the huge map, survivor camps and bunkers, the Harvester and Uber Pod, the campaign, and the new space intro.
 
 ### Modes
 

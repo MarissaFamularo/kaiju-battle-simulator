@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { WORLD, WAVES, BACKUP, KAIJU_CATS } from './config.js';
+import { WORLD, WAVES, BACKUP, KAIJU_CATS, INVASION_WAVES } from './config.js';
 import { Physics } from './physics.js';
 import { Particles } from './fx/particles.js';
 import { City } from './world/city.js';
@@ -9,6 +9,8 @@ import { Projectiles } from './entities/projectiles.js';
 import { Military } from './entities/military.js';
 import { Drones } from './entities/drones.js';
 import { Pilot } from './entities/pilot.js';
+import { Tripod, lightningStrike } from './entities/tripod.js';
+import { Aliens } from './entities/aliens.js';
 import { audio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -39,6 +41,7 @@ export class Game {
     this.projectiles = new Projectiles(this);
     this.military = new Military(this);
     this.drones = new Drones(this);
+    this.aliens = new Aliens(this);
     this.kaijus = [];
     this.warnings = [];
     this.mech = null;
@@ -77,7 +80,7 @@ export class Game {
     this.cfg = cfg;
     this.mode = mode;
     this.time = 0;
-    this.stats = { kills: 0, weakHits: 0, damage: 0, start: 0, bonks: 0 };
+    this.stats = { kills: 0, tripods: 0, weakHits: 0, damage: 0, start: 0, bonks: 0 };
     this.cooldowns = { drones: 0, apache: 12, gunship: 25, jets: 35, missiles: 0 };
     this.waveIdx = -1;
     this.waveState = 'pre';
@@ -113,11 +116,20 @@ export class Game {
     if (this.mode === 'smash') return 'FREE SMASH';
     if (this.waveIdx < 0) return 'GET READY';
     if (this.mode === 'endless') return `WAVE ${this.waveIdx + 1}`;
+    if (this.mode === 'invasion') return `INVASION WAVE ${this.waveIdx + 1}`;
     return `WAVE ${this.waveIdx + 1} / ${WAVES.length}`;
   }
 
   waveList(i) {
     if (this.mode === 'mission') return WAVES[i];
+    if (this.mode === 'invasion') {
+      // the table first, then it keeps growing forever
+      if (i < INVASION_WAVES.length) return INVASION_WAVES[i];
+      const extra = i - INVASION_WAVES.length;
+      const out = [Math.min(5, 3 + Math.floor(extra / 2))];
+      for (let k = 0; k < 2 + Math.floor(extra / 2); k++) out.push('T');
+      return out;
+    }
     const n = 1 + Math.floor(i / 3);
     const out = [];
     for (let k = 0; k < n; k++) out.push(Math.min(5, 1 + Math.floor(i / 2) - k));
@@ -127,7 +139,7 @@ export class Game {
   startWave(i) {
     this.waveIdx = i;
     const list = this.waveList(i);
-    this.spawnQueue = list.map((cat, k) => ({ cat, delay: k * 20 + 1 }));
+    this.spawnQueue = list.map((cat, k) => ({ cat, delay: k * (this.mode === 'invasion' ? 14 : 20) + 1 }));
     this.waveState = 'fighting';
     this.hud.alert(`WAVE ${i + 1}`, 3);
     audio.play('uiBig');
@@ -186,6 +198,43 @@ export class Game {
     this.nav.say('warn', lines[Math.floor(Math.random() * lines.length)], 3, 0);
   }
 
+  // ---- tripods (chapter 2): lightning keeps hitting one spot ahead of you, then a tripod climbs out
+  queueTripod(type = 'attacker') {
+    const ref = this.pilot && !this.pilot.dead ? this.pilot.pos : (this.mech ? this.mech.pos : new THREE.Vector3());
+    const B = WORLD.bound - 120;
+    let x = 0, z = 0;
+    for (let tries = 0; tries < 12; tries++) {
+      const a = this.view.yaw + (Math.random() - 0.5) * (0.9 + tries * 0.4);
+      const d = 300 + Math.random() * 130;
+      x = THREE.MathUtils.clamp(ref.x + Math.sin(a) * d, -B, B);
+      z = THREE.MathUtils.clamp(ref.z + Math.cos(a) * d, this.city.waterEdge + 120, B);
+      const farFromMe = Math.hypot(x - ref.x, z - ref.z) > 220;
+      const farFromPlant = Math.hypot(x - this.city.plantCenter.x, z - this.city.plantCenter.z) > 230;
+      if (farFromMe && farFromPlant) break;
+    }
+    this.warnings.push({ tripod: true, type, t: 8.5, strikeT: 0.2, strikes: 0, x, z, zone: new THREE.Vector3(x, 0, z), radius: 90 });
+    audio.play('alarm');
+    this.hud.alert('LIGHTNING STORM AHEAD', 5, true);
+    this.nav.say('tripodWarn', 'Lightning keeps hitting the same spot ahead of you! Something is coming up out of the ground. Hide behind a building so its scanner light cannot find you!', 3, 0);
+  }
+
+  spawnTripod(w) {
+    lightningStrike(this, w.x, w.z, true);
+    const t = new Tripod(this, { type: w.type, x: w.x, z: w.z });
+    this.kaijus.push(t);
+    this.hud.alert('TRIPOD RISING', 4, true);
+    this.nav.say('tripodRise', `A tripod! Legs first, then it pushes itself up. That is ${t.name}. It can only attack if its scanner light finds you. Its weak spot is the glowing core underneath.`, 3, 0);
+  }
+
+  onTripodKilled(t) {
+    this.stats.kills++;
+    this.stats.tripods++;
+    this.hud.alert(`${t.name.toUpperCase()} DESTROYED`, 3);
+    this.nav.say('tripodKill', [`${t.name} is down! Great work, pilot!`, 'Tripod destroyed! Its lights are out for good.', `Timber! ${t.name} is scrap metal now.`][Math.floor(Math.random() * 3)], 3, 0);
+    this.hitstop(0.35);
+    audio.play('uiBig');
+  }
+
   spawnKaiju(w) {
     const k = new Kaiju(this, { cat: w.cat, x: w.x, z: w.z, from: w.from, type: w.type });
     this.kaijus.push(k);
@@ -228,6 +277,7 @@ export class Game {
       for (let i = this.kaijus.length - 1; i >= 0; i--) if (this.kaijus[i].removeMe) { this.kaijus[i].remove(); this.kaijus.splice(i, 1); }
       this.projectiles.update(dt);
       this.military.update(dt);
+      this.aliens.update(dt);
       this.drones.update(dt, this.mech && this.state !== 'landing' ? this.mech.pos : null);
     }
     if (playing) {
@@ -279,6 +329,7 @@ export class Game {
       const cat = 1 + Math.floor(Math.random() * 4);
       this.queueKaiju(cat);
     }
+    if (input.pressed('KeyT') && this.mode === 'smash' && !this.warnings.some((w) => w.tripod)) this.queueTripod();
   }
 
   toggleEject() {
@@ -403,7 +454,7 @@ export class Game {
     this.stats.start = this.time;
     if (this.app.settings.music) audio.startMusic();
     if (this.mode === 'smash') {
-      setTimeout(() => this.nav.say('smashMode', 'Free Smash mode! Smash anything you want. Press K whenever you want a kaiju to show up.', 3, 0), 6000);
+      setTimeout(() => this.nav.say('smashMode', 'Free Smash mode! Smash anything you want. Press K whenever you want a kaiju to show up, or T for a tripod.', 3, 0), 6000);
     }
   }
 
@@ -412,6 +463,17 @@ export class Game {
     for (let i = this.warnings.length - 1; i >= 0; i--) {
       const w = this.warnings[i];
       w.t -= dt;
+      if (w.tripod) {
+        // lightning hits the same spot over and over, faster and faster
+        w.strikeT -= dt;
+        if (w.strikeT <= 0 && w.t > 0.4) {
+          w.strikes++;
+          w.strikeT = 0.3 + Math.random() * 0.5 + w.t * 0.08;
+          lightningStrike(this, w.x + (Math.random() - 0.5) * 50, w.z + (Math.random() - 0.5) * 50);
+        }
+        if (w.t <= 0) { this.warnings.splice(i, 1); this.spawnTripod(w); }
+        continue;
+      }
       if (w.t < 3 && Math.random() < dt * 4) this.shake(0.3, new THREE.Vector3(w.x, 0, w.z));
       if (w.t <= 0) { this.warnings.splice(i, 1); this.spawnKaiju(w); }
     }
@@ -419,7 +481,7 @@ export class Game {
     for (let i = this.spawnQueue.length - 1; i >= 0; i--) {
       const s = this.spawnQueue[i];
       s.delay -= dt;
-      if (s.delay <= 0) { this.spawnQueue.splice(i, 1); this.queueKaiju(s.cat); }
+      if (s.delay <= 0) { this.spawnQueue.splice(i, 1); if (s.cat === 'T') this.queueTripod(); else this.queueKaiju(s.cat); }
     }
     const living = this.kaijus.filter((k) => !k.dead).length;
     if (this.waveState === 'pre') {
@@ -434,7 +496,7 @@ export class Game {
         const heal = this.mech.maxHp * 0.4;
         this.mech.hp = Math.min(this.mech.maxHp, this.mech.hp + heal);
         this.hud.alert('WAVE CLEARED', 3);
-        this.nav.say('cleared', 'Wave cleared! Repair crews patched up your armor. More kaiju are coming.', 3, 0);
+        this.nav.say('cleared', this.mode === 'invasion' ? 'Wave cleared! Repair crews patched up your armor. Watch the sky for more lightning.' : 'Wave cleared! Repair crews patched up your armor. More kaiju are coming.', 3, 0);
         audio.intensity = 0.25;
       }
     } else if (this.waveState === 'cleared') {
@@ -522,6 +584,16 @@ export class Game {
         const t = -b - Math.sqrt(disc);
         if (t > 20 && (t < best - (h.weak ? 15 : 0))) { best = t; info = { kaiju: k, weak: h.weak }; }
       }
+    }
+    // little aliens (so the pilot's blaster aims right at them)
+    for (const al of this.aliens.list) {
+      if (al.state !== 'run' && al.state !== 'on') continue;
+      const oc = origin.clone().sub(al.center);
+      const b = oc.dot(dir);
+      const disc = b * b - (oc.lengthSq() - 16);
+      if (disc < 0) continue;
+      const t = -b - Math.sqrt(disc);
+      if (t > 2 && t < best) { best = t; info = { alien: al, weak: false }; }
     }
     const far = origin.clone().addScaledVector(dir, best);
     const bh = this.city.raycast(origin.clone().addScaledVector(dir, 30), far);
@@ -712,6 +784,7 @@ export class Game {
     const secs = Math.max(0, this.time - (this.stats.start || 0));
     return {
       kills: this.stats.kills,
+      tripods: this.stats.tripods,
       weak: this.stats.weakHits,
       buildings: this.city.destroyed,
       damage: Math.round(this.stats.damage),

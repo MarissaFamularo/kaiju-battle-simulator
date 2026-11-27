@@ -25,7 +25,7 @@ export class Projectiles {
       pos: o.pos.clone(), vel: o.dir.clone().multiplyScalar(o.speed), damage: o.damage, owner: o.owner,
       color: new THREE.Color(o.color || '#ffffff'), size: o.size || 8, radius: o.radius || 3, gravity: o.gravity || 0,
       life: o.life || 4, acid: !!o.acid, smash: o.smash ?? 1, kind: o.kind || 'plasma', boom: o.boom || 0,
-      trail: o.trail || null, target: o.target || null, aimIdx: o.aimIdx || 0, age: 0,
+      trail: o.trail || null, src: o.src || null, target: o.target || null, aimIdx: o.aimIdx || 0, age: 0,
     });
   }
 
@@ -49,10 +49,18 @@ export class Projectiles {
         if (p.acid) g.fx.acid(p.pos);
       }
       let hit = null;
-      if (p.owner !== 'kaiju') {
-        // vs kaiju
+      // the pilot's blaster knocks little aliens off the Jaeger
+      if (p.owner === 'pilot' && g.aliens) {
+        const al = g.aliens.hitSeg(_a, _b, p.radius);
+        if (al) { hit = { point: al.center.clone() }; g.aliens.hit(al, hit.point); }
+      }
+      if (hit) {
+        // already hit an alien
+      } else if (p.owner !== 'kaiju') {
+        // vs kaiju and tripods (a tripod's lasers only hurt kaiju)
         for (const k of g.kaijus) {
-          if (k.dead || k.emerging) continue;
+          if (k.dead || k.emerging || k === p.src) continue;
+          if (p.owner === 'tripod' && k.isTripod) continue;
           if (k.pos.distanceTo(p.pos) > k.height * 1.5 + 60) continue;
           let best = null;
           for (const h of k.hitCache) {

@@ -88,7 +88,7 @@ class AudioEngine {
 
   play(name, pos = null, scale = 1) {
     if (!this.ctx) return;
-    const v = this.vol(pos, scale, name === 'explosion' || name === 'roar' || name === 'collapse' ? 1600 : 900);
+    const v = this.vol(pos, scale, name === 'explosion' || name === 'roar' || name === 'collapse' || name === 'thunder' || name === 'horn' ? 1800 : 900);
     if (v < 0.02) return;
     switch (name) {
       case 'stomp':
@@ -175,6 +175,27 @@ class AudioEngine {
         break;
       case 'rumble':
         this.noise(2.5, { freq: 120, gain: 0.5 * v, attack: 0.8 });
+        break;
+      case 'thunder':
+        this.noise(0.18, { freq: 5000, type: 'highpass', gain: 0.6 * v });
+        this.noise(1.8, { freq: 900, freqEnd: 60, gain: 0.6 * v, attack: 0.02 });
+        this.tone(1.2, { freq: 70, freqEnd: 30, gain: 0.35 * v });
+        break;
+      case 'horn':
+        // the tripod's loud horn: two long low blasts
+        for (const d of [0, 1.15]) {
+          this.tone(1.0, { type: 'sawtooth', freq: d ? 62 : 82, gain: 0.3 * v, attack: 0.08, delay: d });
+          this.tone(1.0, { type: 'sawtooth', freq: d ? 93.5 : 123.5, gain: 0.22 * v, attack: 0.08, delay: d });
+          this.tone(1.0, { type: 'square', freq: d ? 124 : 164, gain: 0.07 * v, attack: 0.1, delay: d });
+        }
+        break;
+      case 'laser':
+        this.tone(0.2, { type: 'square', freq: 1900, freqEnd: 260, gain: 0.1 * v });
+        this.tone(0.16, { type: 'sawtooth', freq: 900, freqEnd: 200, gain: 0.1 * v });
+        break;
+      case 'splat':
+        this.noise(0.18, { freq: 700, freqEnd: 150, gain: 0.4 * v });
+        this.tone(0.2, { type: 'sine', freq: 240, freqEnd: 70, gain: 0.25 * v });
         break;
       case 'eject':
         this.noise(0.6, { freq: 400, freqEnd: 3000, type: 'bandpass', gain: 0.3, attack: 0.02 });
