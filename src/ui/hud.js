@@ -132,7 +132,7 @@ export class HUD {
     // weak spot markers
     let mi = 0;
     for (const k of g.kaijus) {
-      if (k.dead || k.emerging || !k.revealed) continue;
+      if (k.dead || k.emerging || !k.revealed || k.cloaked) continue; // no weak-spot marker on a cloaked Ghost Pod
       for (const h of k.hitCache) {
         if (!h.weak) continue;
         _p.copy(h.p).project(g.camera);

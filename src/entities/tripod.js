@@ -334,7 +334,6 @@ export class Tripod {
     }
     if (sp.cloak) {
       this.cloaked = !this.dead && !this.emerging && (this.state === 'search' || this.state === 'boot') && this.hitFlash <= 0;
-      this.revealed = !this.cloaked;
       this.fade += ((this.cloaked ? 0.12 : 1) - this.fade) * Math.min(1, dt * 3);
       for (const key of ['hull', 'trim', 'dark']) { const mt = m.mats[key]; mt.transparent = this.fade < 0.98; mt.opacity = this.fade; }
       m.mats.strip.emissiveIntensity = 2.2 * this.fade;

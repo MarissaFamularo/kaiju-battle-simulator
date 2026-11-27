@@ -737,7 +737,7 @@ export class Game {
   updateReveal(dt) {
     const ref = this.pilot ? this.pilot.pos : this.mech.pos;
     for (const k of this.kaijus) {
-      if (k.dead || k.emerging || k.revealed) continue;
+      if (k.dead || k.emerging || k.revealed || k.isTripod) continue; // the scan is for kaiju; tripods and ships have no weak-spot list
       const d = k.pos.distanceTo(ref);
       const onScreen = (() => {
         const p = k.pos.clone().setY(k.height * 0.5).project(this.camera);
