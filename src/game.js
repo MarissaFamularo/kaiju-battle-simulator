@@ -3,6 +3,7 @@ import { WORLD, WAVES, BACKUP, KAIJU_CATS, INVASION_WAVES } from './config.js';
 import { Physics } from './physics.js';
 import { Particles } from './fx/particles.js';
 import { City } from './world/city.js';
+import { Wasteland } from './world/wasteland.js';
 import { Mech } from './entities/mech.js';
 import { Kaiju } from './entities/kaiju.js';
 import { Projectiles } from './entities/projectiles.js';
@@ -30,12 +31,14 @@ export class Game {
   }
 
   // ---------------------------------------------------------------- world
-  buildWorld() {
+  // kind: 'city' (the original map) or 'wasteland' (chapter 2's huge map)
+  buildWorld(kind = 'city') {
     if (this.scene) this.disposeWorld();
+    this.worldKind = kind;
     this.scene = new THREE.Scene();
     this.physics = new Physics();
     this.fx = new Particles(this.scene);
-    this.city = new City(this.scene, this.physics, this.fx);
+    this.city = kind === 'wasteland' ? new Wasteland(this.scene, this.physics, this.fx) : new City(this.scene, this.physics, this.fx);
     this.city.onPlantDamaged = (b, amt, src) => this.onPlantDamaged(b, amt, src);
     this.city.onBuildingDestroyed = (b, src) => this.onBuildingDestroyed(b, src);
     this.projectiles = new Projectiles(this);
@@ -75,8 +78,10 @@ export class Game {
 
   // ---------------------------------------------------------------- mission flow
   startMission(cfg, mode) {
-    if (this.dirty) this.buildWorld();
+    const kind = mode === 'freeplay' ? 'wasteland' : 'city';
+    if (this.dirty || kind !== this.worldKind) this.buildWorld(kind);
     this.dirty = true;
+    this.fp = { t: 16, count: 0, craterCd: 0 }; // free play spawn timers
     this.cfg = cfg;
     this.mode = mode;
     this.time = 0;
@@ -114,6 +119,7 @@ export class Game {
 
   waveLabel() {
     if (this.mode === 'smash') return 'FREE SMASH';
+    if (this.mode === 'freeplay') return 'FREE PLAY';
     if (this.waveIdx < 0) return 'GET READY';
     if (this.mode === 'endless') return `WAVE ${this.waveIdx + 1}`;
     if (this.mode === 'invasion') return `INVASION WAVE ${this.waveIdx + 1}`;
@@ -146,7 +152,19 @@ export class Game {
     audio.intensity = Math.min(1, 0.4 + i * 0.1);
   }
 
+  // On the huge map enemies can come up anywhere around you.
+  pickWildSpawn() {
+    const ref = this.pilot && !this.pilot.dead ? this.pilot.pos : (this.mech ? this.mech.pos : new THREE.Vector3());
+    const B = this.city.bound - 150;
+    const a = Math.random() * Math.PI * 2, d = 460 + Math.random() * 380;
+    const x = THREE.MathUtils.clamp(ref.x + Math.cos(a) * d, -B, B);
+    const z = THREE.MathUtils.clamp(ref.z + Math.sin(a) * d, -B, B);
+    const wet = this.city.groundAt(x, z) < -2;
+    return { x, z, from: wet ? 'water' : 'ground', sector: this.city.nearestPlace(x, z).name };
+  }
+
   pickSpawn() {
+    if (this.city.hasTerrain) return this.pickWildSpawn();
     const ref = this.mech ? this.mech.pos : new THREE.Vector3();
     const r = Math.random();
     let x, z, from = 'ground', sector;
@@ -184,8 +202,8 @@ export class Game {
     return { x, z, from, sector };
   }
 
-  queueKaiju(cat) {
-    const s = this.pickSpawn();
+  queueKaiju(cat, spot = null) {
+    const s = spot || this.pickSpawn();
     const off = new THREE.Vector3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2).normalize().multiplyScalar(Math.random() * 240);
     this.warnings.push({ t: 7 + Math.random() * 2, cat, ...s, zone: new THREE.Vector3(s.x, 0, s.z).add(off), radius: 380 });
     audio.play('alarm');
@@ -201,7 +219,7 @@ export class Game {
   // ---- tripods (chapter 2): lightning keeps hitting one spot ahead of you, then a tripod climbs out
   queueTripod(type = 'attacker') {
     const ref = this.pilot && !this.pilot.dead ? this.pilot.pos : (this.mech ? this.mech.pos : new THREE.Vector3());
-    const B = WORLD.bound - 120;
+    const B = this.city.bound - 120;
     let x = 0, z = 0;
     for (let tries = 0; tries < 12; tries++) {
       const a = this.view.yaw + (Math.random() - 0.5) * (0.9 + tries * 0.4);
@@ -209,7 +227,7 @@ export class Game {
       x = THREE.MathUtils.clamp(ref.x + Math.sin(a) * d, -B, B);
       z = THREE.MathUtils.clamp(ref.z + Math.cos(a) * d, this.city.waterEdge + 120, B);
       const farFromMe = Math.hypot(x - ref.x, z - ref.z) > 220;
-      const farFromPlant = Math.hypot(x - this.city.plantCenter.x, z - this.city.plantCenter.z) > 230;
+      const farFromPlant = this.city.noPlant || Math.hypot(x - this.city.plantCenter.x, z - this.city.plantCenter.z) > 230;
       if (farFromMe && farFromPlant) break;
     }
     this.warnings.push({ tripod: true, type, t: 8.5, strikeT: 0.2, strikes: 0, x, z, zone: new THREE.Vector3(x, 0, z), radius: 90 });
@@ -229,6 +247,7 @@ export class Game {
   onTripodKilled(t) {
     this.stats.kills++;
     this.stats.tripods++;
+    this.fieldRepair();
     this.hud.alert(`${t.name.toUpperCase()} DESTROYED`, 3);
     this.nav.say('tripodKill', [`${t.name} is down! Great work, pilot!`, 'Tripod destroyed! Its lights are out for good.', `Timber! ${t.name} is scrap metal now.`][Math.floor(Math.random() * 3)], 3, 0);
     this.hitstop(0.35);
@@ -453,6 +472,9 @@ export class Game {
     this.nav.say('touchdown', `Touchdown! ${this.cfg.name} is in the city. Move with W A S D and look with the mouse.`, 3, 0);
     this.stats.start = this.time;
     if (this.app.settings.music) audio.startMusic();
+    if (this.mode === 'freeplay') {
+      setTimeout(() => this.nav.say('freePlay', 'Free Play! This is the big map. The giant hill is east, the beach and the storm are north, the forest is northwest and the crater is southwest. Kaiju and tripods can show up anywhere.', 3, 0), 6000);
+    }
     if (this.mode === 'smash') {
       setTimeout(() => this.nav.say('smashMode', 'Free Smash mode! Smash anything you want. Press K whenever you want a kaiju to show up, or T for a tripod.', 3, 0), 6000);
     }
@@ -478,6 +500,7 @@ export class Game {
       if (w.t <= 0) { this.warnings.splice(i, 1); this.spawnKaiju(w); }
     }
     if (this.mode === 'smash') return;
+    if (this.mode === 'freeplay') { this.updateFreePlay(dt); return; }
     for (let i = this.spawnQueue.length - 1; i >= 0; i--) {
       const s = this.spawnQueue[i];
       s.delay -= dt;
@@ -503,6 +526,38 @@ export class Game {
       this.waveTimer -= dt;
       if (this.waveTimer <= 0) this.startWave(this.waveIdx + 1);
     }
+  }
+
+  // Free play: kaiju and tripods keep turning up around the huge map.
+  updateFreePlay(dt) {
+    const fp = this.fp;
+    fp.t -= dt; fp.craterCd -= dt;
+    const busy = this.kaijus.filter((k) => !k.dead).length + this.warnings.length;
+    if (fp.t <= 0) {
+      if (busy < 3) {
+        fp.count++;
+        fp.t = 40 + Math.random() * 30;
+        if (Math.random() < 0.5) this.queueTripod();
+        else this.queueKaiju(Math.min(5, 1 + Math.floor(fp.count / 3) + (Math.random() < 0.3 ? 1 : 0)));
+        audio.intensity = Math.min(1, 0.4 + fp.count * 0.04);
+      } else fp.t = 10;
+    }
+    // the crater: get too close to the wrecked tripod head and monsters come out
+    const c = this.city.places.crater;
+    const ref = this.pilot && !this.pilot.dead ? this.pilot.pos : this.mech.pos;
+    if (fp.craterCd <= 0 && Math.hypot(ref.x - c.x, ref.z - c.z) < 330) {
+      fp.craterCd = 150;
+      this.hud.alert('SOMETHING IS MOVING IN THE CRATER', 4, true);
+      this.nav.say('crater', 'You got too close to the wrecked tripod! Something is crawling out of the crater. Two of them!', 3, 0);
+      for (const s of [-1, 1]) this.warnings.push({ t: 2.5 + (s > 0 ? 1.5 : 0), cat: 1, type: 'stalker', x: c.x + s * 70, z: c.z + 40, from: 'ground', sector: c.name, zone: new THREE.Vector3(c.x, 0, c.z), radius: 120 });
+      audio.play('alarm');
+    }
+  }
+
+  // Free play has no repair crews yet (survivor camps come next), so wins patch you up.
+  fieldRepair() {
+    if (this.mode !== 'freeplay' || !this.mech || this.mech.dead) return;
+    this.mech.hp = Math.min(this.mech.maxHp, this.mech.hp + this.mech.maxHp * 0.3);
   }
 
   updateReveal(dt) {
@@ -598,7 +653,10 @@ export class Game {
     const far = origin.clone().addScaledVector(dir, best);
     const bh = this.city.raycast(origin.clone().addScaledVector(dir, 30), far);
     if (bh) { best = 30 + (best - 30) * bh.t; info = null; }
-    if (dir.y < 0) {
+    if (this.city.hasTerrain) {
+      const tg = this.city.rayGround(origin, dir, best);
+      if (tg !== null && tg < best) { best = tg; info = null; }
+    } else if (dir.y < 0) {
       const tg = -origin.y / dir.y;
       if (tg < best) { best = tg; info = null; }
     }
@@ -615,7 +673,7 @@ export class Game {
     const dir = this.viewDir();
     const right = new THREE.Vector3(-Math.cos(this.view.yaw), 0, Math.sin(this.view.yaw));
     const p = pivot.clone().addScaledVector(dir, -dist).addScaledVector(right, side);
-    p.y = Math.max(p.y, 4);
+    p.y = Math.max(p.y, this.city.groundAt(p.x, p.z) + 4);
     return p;
   }
 
@@ -692,6 +750,7 @@ export class Game {
 
   onKaijuKilled(k) {
     this.stats.kills++;
+    this.fieldRepair();
     this.hud.alert(`${k.name.toUpperCase()} DEFEATED`, 3);
     this.nav.say('kill', [`${k.name} is down! Great work, pilot!`, `Kaiju defeated! The city is safer thanks to you.`, `That's how a Jaeger does it! ${k.name} is finished.`][Math.floor(Math.random() * 3)], 3, 0);
     this.hitstop(0.35);

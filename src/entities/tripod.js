@@ -26,7 +26,7 @@ const _q = new THREE.Quaternion();
 
 // A lightning bolt from the sky down to (x, z).
 export function lightningStrike(game, x, z, big = false) {
-  const end = new THREE.Vector3(x, 0, z);
+  const end = new THREE.Vector3(x, game.city.groundAt(x, z), z);
   const p = new THREE.Vector3(x + (Math.random() - 0.5) * 240, 900, z + (Math.random() - 0.5) * 240);
   const n = 46;
   const step = end.clone().sub(p).divideScalar(n);
@@ -42,8 +42,8 @@ export function lightningStrike(game, x, z, big = false) {
       for (let k = 0; k < 7; k++) { br.add(dir); br.x += (Math.random() - 0.5) * 8; game.fx.glow(br, BOLT, 12, 0.16); }
     }
   }
-  const hit = end.clone().setY(3);
-  game.fx.flash(end.clone().setY(40), '#bcd8ff', big ? 14000 : 8000, 0.35);
+  const hit = end.clone().setY(end.y + 3);
+  game.fx.flash(end.clone().setY(end.y + 40), '#bcd8ff', big ? 14000 : 8000, 0.35);
   game.fx.ring(hit, 4, big ? 110 : 60, 0.5, '#cfe4ff', 0.6);
   game.fx.sparks(hit, big ? 60 : 26, 'blue');
   game.fx.dust(hit, big ? 1.4 : 0.7, big ? 14 : 6);
@@ -158,7 +158,7 @@ export class Tripod {
     this.radius = 12;
     this.height = 60;
     this.scale = 1;
-    this.pos = new THREE.Vector3(x, 0, z);
+    this.pos = new THREE.Vector3(x, game.city.groundAt(x, z), z); // pos.y is always the land height
     this.vel = new THREE.Vector3();
     this.knock = new THREE.Vector3();
     const ref = game.mech ? game.mech.pos : new THREE.Vector3();
@@ -175,7 +175,7 @@ export class Tripod {
     this.model = buildTripod();
     this.root = this.model.root;
     game.scene.add(this.root);
-    this.feet = LEG_ANGLES.map(() => ({ pos: new THREE.Vector3(x, BURIED, z), from: new THREE.Vector3(), to: new THREE.Vector3(), t: -1, planted: false }));
+    this.feet = LEG_ANGLES.map(() => ({ pos: new THREE.Vector3(x, this.pos.y + BURIED, z), from: new THREE.Vector3(), to: new THREE.Vector3(), t: -1, planted: false }));
     this.stepCd = 0;
     this.headYaw = 0;
     this.lit = 0;           // 0 = lights off, 1 = on
@@ -197,7 +197,7 @@ export class Tripod {
     ];
     this.body = game.physics.kinematicBall(x, -60, z, 12);
     // break out of the ground
-    const p = this.pos.clone().setY(4);
+    const p = this.pos.clone().setY(this.pos.y + 4);
     game.city.damageArea(p, 40, 99999, { source: 'tripod', force: 2.2 });
     game.fx.explosion(p, 1.2);
     game.fx.groundDust(p, 80, 40);
@@ -211,7 +211,9 @@ export class Tripod {
 
   restFoot(i, out) {
     const a = this.yaw + LEG_ANGLES[i];
-    return out.set(this.pos.x + Math.sin(a) * FOOT_R, 0, this.pos.z + Math.cos(a) * FOOT_R);
+    out.set(this.pos.x + Math.sin(a) * FOOT_R, 0, this.pos.z + Math.cos(a) * FOOT_R);
+    out.y = this.game.city.groundAt(out.x, out.z);
+    return out;
   }
 
   headPos(out = new THREE.Vector3()) { return this.model.eye.getWorldPosition(out); }
@@ -235,12 +237,13 @@ export class Tripod {
       this.pos.addScaledVector(this.knock, dt);
       this.knock.multiplyScalar(Math.max(0, 1 - dt * 4));
     }
-    const B = WORLD.bound;
+    const B = g.city.bound;
     this.pos.x = THREE.MathUtils.clamp(this.pos.x, -B, B);
     this.pos.z = THREE.MathUtils.clamp(this.pos.z, g.city.waterEdge + 30, B);
+    this.pos.y = g.city.groundAt(this.pos.x, this.pos.z);
     if (!this.dead && !this.emerging) this.walkLegs(dt);
     this.pose(dt);
-    if (this.body) this.body.setNextKinematicTranslation({ x: this.pos.x, y: Math.max(-60, this.bodyY), z: this.pos.z });
+    if (this.body) this.body.setNextKinematicTranslation({ x: this.pos.x, y: this.pos.y + Math.max(-60, this.bodyY), z: this.pos.z });
   }
 
   // legs first, then it pushes itself up
@@ -254,26 +257,26 @@ export class Tripod {
       const rest = this.restFoot(i, _a);
       const e = k * k * (3 - 2 * k);
       f.pos.set(this.pos.x + (rest.x - this.pos.x) * e, 0, this.pos.z + (rest.z - this.pos.z) * e);
-      f.pos.y = k >= 1 ? 0 : BURIED * (1 - Math.min(1, k * 3)) + Math.sin(k * Math.PI) * 40;
-      if (k > 0 && k < 1 && Math.random() < 0.4) g.fx.dust(_b.set(this.pos.x + (rest.x - this.pos.x) * 0.3, 2, this.pos.z + (rest.z - this.pos.z) * 0.3), 0.7, 2);
+      f.pos.y = k >= 1 ? rest.y : this.pos.y + BURIED * (1 - Math.min(1, k * 3)) + Math.sin(k * Math.PI) * 40;
+      if (k > 0 && k < 1 && Math.random() < 0.4) g.fx.dust(_b.set(this.pos.x + (rest.x - this.pos.x) * 0.3, this.pos.y + 2, this.pos.z + (rest.z - this.pos.z) * 0.3), 0.7, 2);
       if (k >= 1 && !f.planted) {
         f.planted = true;
         this.footfall(f.pos, 1.3);
-        g.city.spawnChunk(-1, f.pos.x, 3, f.pos.z, 2, 1.2, 2, new THREE.Vector3((Math.random() - 0.5) * 30, 30, (Math.random() - 0.5) * 30), 4);
+        g.city.spawnChunk(-1, f.pos.x, f.pos.y + 3, f.pos.z, 2, 1.2, 2, new THREE.Vector3((Math.random() - 0.5) * 30, 30, (Math.random() - 0.5) * 30), 4);
       }
     }
     if (t > LEGS) {
       const k = Math.min(1, (t - LEGS) / RISE);
       const e = 1 - (1 - k) ** 3;
       if (this.bodyY === BURIED) {
-        const p = this.pos.clone().setY(4);
+        const p = this.pos.clone().setY(this.pos.y + 4);
         g.fx.groundDust(p, 70, 40);
         g.city.impulseDebris(p, 80, 40);
         audio.play('explosion', p, 0.8);
         g.shake(1, this.pos);
       }
       this.bodyY = BURIED + 0.01 + (STAND - BURIED) * e;
-      if (Math.random() < 0.5) g.fx.dust(_b.set(this.pos.x + (Math.random() - 0.5) * 30, 2, this.pos.z + (Math.random() - 0.5) * 30), 0.8, 2);
+      if (Math.random() < 0.5) g.fx.dust(_b.set(this.pos.x + (Math.random() - 0.5) * 30, this.pos.y + 2, this.pos.z + (Math.random() - 0.5) * 30), 0.8, 2);
       if (k >= 1) { this.emerging = false; this.setState('boot'); }
     }
   }
@@ -295,13 +298,13 @@ export class Tripod {
     const dir = _c.set(0, -1, 0).applyQuaternion(_q);
     const ang = dir.angleTo(to);
     if (ang > this.spec.cone + Math.atan2(radius, dist) && dist > 45) return false;
-    return !g.city.raycast(eye, point);
+    return !g.city.raycast(eye, point) && !g.city.terrainBlocks(eye, point);
   }
 
   canSee(point) {
     const eye = this.headPos(_a);
     if (eye.distanceTo(point) > 620) return false;
-    return !this.game.city.raycast(eye, point);
+    return !this.game.city.raycast(eye, point) && !this.game.city.terrainBlocks(eye, point);
   }
 
   nearestKaiju(max) {
@@ -366,7 +369,7 @@ export class Tripod {
     if (this.stateT > 1.6) {
       if (this.capsuleCd <= 0 && this.game.mech && !this.game.mech.dead && this.game.aliens) {
         this.capsuleCd = 45;
-        this.game.aliens.launchCapsule(this.headPos().setY(this.bodyY + 6), this.game.mech);
+        this.game.aliens.launchCapsule(this.headPos().setY(this.pos.y + this.bodyY + 6), this.game.mech);
       }
       this.fireCd = 0.6;
       this.setState('attack');
@@ -471,10 +474,10 @@ export class Tripod {
   footfall(p, power = 1) {
     const g = this.game;
     audio.play('stomp', p, 0.6 * power);
-    g.fx.dust(_c.copy(p).setY(2), 0.6 * power, 4);
+    g.fx.dust(_c.copy(p).setY(p.y + 2), 0.6 * power, 4);
     g.shake(0.2 * power, p);
     g.city.crushCars(p.x, p.z, 9);
-    g.city.damageArea(_c.copy(p).setY(4), 8, 260 * power, { source: 'tripod', force: 1.1 });
+    g.city.damageArea(_c.copy(p).setY(p.y + 4), 8, 260 * power, { source: 'tripod', force: 1.1 });
   }
 
   walkLegs(dt) {
@@ -487,8 +490,8 @@ export class Tripod {
         const k = Math.min(1, f.t);
         const e = k * k * (3 - 2 * k);
         f.pos.lerpVectors(f.from, f.to, e);
-        f.pos.y = Math.sin(k * Math.PI) * 13;
-        if (k >= 1) { f.t = -1; f.pos.y = 0; this.footfall(f.pos); this.stepCd = 0.05; }
+        f.pos.y += Math.sin(k * Math.PI) * 13;
+        if (k >= 1) { f.t = -1; f.pos.copy(f.to); this.footfall(f.pos); this.stepCd = 0.05; }
         continue;
       }
       const rest = this.restFoot(i, _a).addScaledVector(this.vel, 0.4);
@@ -509,7 +512,7 @@ export class Tripod {
     const m = this.model;
     const stepping = this.feet.some((f) => f.t >= 0);
     const bob = this.dead || this.emerging ? 0 : Math.sin(g.time * 2.2 + this.pos.z) * 0.6 - (stepping ? 0.8 : 0);
-    m.body.position.set(this.pos.x, this.bodyY + bob, this.pos.z);
+    m.body.position.set(this.pos.x, this.pos.y + this.bodyY + bob, this.pos.z);
     m.body.rotation.set(this.dead ? 0 : Math.min(0.12, this.vel.length() * 0.005), this.yaw, this.tilt * (this.fallDir || 1), 'YXZ');
     m.head.rotation.y = this.headYaw;
     m.body.updateMatrixWorld(true);
@@ -552,11 +555,11 @@ export class Tripod {
     const eye = this.headPos(_a);
     m.beam.getWorldQuaternion(_q);
     const dir = _b.set(0, -1, 0).applyQuaternion(_q);
-    let reach = dir.y < -0.02 ? Math.min(this.spec.range, eye.y / -dir.y) : this.spec.range;
+    let reach = dir.y < -0.02 ? Math.min(this.spec.range, Math.max(10, eye.y - this.pos.y) / -dir.y) : this.spec.range;
     const far = _c.copy(eye).addScaledVector(dir, reach);
     const wall = lit > 0 ? g.city.raycast(eye, far) : null;
     if (wall) { reach *= wall.t; far.copy(eye).addScaledVector(dir, reach); }
-    m.spot.position.set(far.x, 0.7, far.z);
+    m.spot.position.set(far.x, g.city.groundAt(far.x, far.z) + 0.7, far.z);
     m.spot.scale.setScalar(Math.max(8, Math.tan(this.spec.cone) * reach * 1.15));
     m.mats.spot.opacity = lit * (wall ? 0.05 : 0.2);
     void dt;
@@ -612,7 +615,7 @@ export class Tripod {
       if (this.bodyY <= 8) {
         this.bodyY = 8;
         this.landed = true;
-        const p = this.pos.clone().setY(5);
+        const p = this.pos.clone().setY(this.pos.y + 5);
         g.fx.explosion(p, 1.6);
         g.fx.groundDust(p, 90, 50);
         g.city.damageArea(p, 30, 500, { source: 'tripod', force: 1.5 });
@@ -623,7 +626,7 @@ export class Tripod {
     } else {
       if (this.deadT < 9 && Math.random() < 0.2) g.fx.fire(this.model.body.position, 1);
       if (this.deadT > 14) {
-        this.root.position.y -= dt * 4;
+        this.root.position.y -= dt * 4; // root sits at the origin, so this sinks the whole wreck
         if (this.deadT > 22) this.removeMe = true;
       }
     }

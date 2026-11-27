@@ -98,7 +98,8 @@ export class Mech {
     const canSprint = sprint && this.energy > 1 && moveZ >= 0 && len > 0;
     if (canSprint) { speed *= 1.75; this.energy = Math.max(0, this.energy - 28 * dt); }
     else this.energy = Math.min(100, this.energy + 16 * dt);
-    if (this.pos.z < g.city.waterEdge) speed *= 0.75;
+    const gy0 = g.city.groundAt(this.pos.x, this.pos.z);
+    if (this.pos.z < g.city.waterEdge || gy0 < -2) speed *= 0.75; // wading through water
     const target = new THREE.Vector3();
     if (len > 0) {
       target.addScaledVector(fwd, moveZ / len).addScaledVector(right, moveX / len).multiplyScalar(speed);
@@ -131,16 +132,17 @@ export class Mech {
       audio.play('punch', this.pos, 0.8);
       g.fx.groundDust(this.pos, 30, 16);
     }
+    const gy = g.city.groundAt(this.pos.x, this.pos.z); // the land under our feet
     if (!this.onGround) {
       this.vy -= 75 * dt;
       this.pos.y += this.vy * dt;
       this.airTime += dt;
-      if (this.pos.y <= 0) {
-        this.pos.y = 0;
+      if (this.pos.y <= gy) {
+        this.pos.y = gy;
         this.onGround = true;
         this.land();
       }
-    }
+    } else this.pos.y = gy;
 
     // push away from kaiju
     for (const k of g.kaijus) {
@@ -154,7 +156,7 @@ export class Mech {
       }
     }
     // world bounds
-    const B = WORLD.bound;
+    const B = g.city.bound;
     this.pos.x = THREE.MathUtils.clamp(this.pos.x, -B, B);
     this.pos.z = THREE.MathUtils.clamp(this.pos.z, -B - 250, B);
 
@@ -175,7 +177,7 @@ export class Mech {
       this.root.rotation.x = -k * k * 1.45;
       if (k >= 1 && !this.crashed) {
         this.crashed = true;
-        const p = this.pos.clone().addScaledVector(this.forward, -30 * this.scale).setY(4);
+        const p = this.pos.clone().addScaledVector(this.forward, -30 * this.scale).setY(this.pos.y + 4);
         g.fx.groundDust(p, 120, 50);
         g.city.damageArea(p, 40, 600, { source: 'mech' });
         audio.play('explosion', p, 1.2);
@@ -243,13 +245,13 @@ export class Mech {
     g.fx.groundDust(this.pos, 60 * power, 40);
     g.fx.ring(this.pos, 5, 90 * power, 0.7, '#ffe0b0', 0.5);
     g.shake(1.2 * power);
-    g.city.damageArea(new THREE.Vector3(this.pos.x, 5, this.pos.z), 34 * this.scale * power, 140 * power * this.frame.power, { source: 'mech', force: 1.5 });
+    g.city.damageArea(new THREE.Vector3(this.pos.x, this.pos.y + 5, this.pos.z), 34 * this.scale * power, 140 * power * this.frame.power, { source: 'mech', force: 1.5 });
     g.city.impulseDebris(this.pos, 80, 40 * power);
     g.city.crushCars(this.pos.x, this.pos.z, 30 * power);
     for (const k of g.kaijus) {
       if (k.dead) continue;
       if (k.pos.distanceTo(this.pos) < 55 * power + k.radius) {
-        k.takeDamage(22 * power * this.frame.power, k.pos.clone().setY(10), new THREE.Vector3().subVectors(k.pos, this.pos).normalize(), { stagger: 0.6, source: 'mech' });
+        k.takeDamage(22 * power * this.frame.power, k.pos.clone().setY(k.pos.y + 10), new THREE.Vector3().subVectors(k.pos, this.pos).normalize(), { stagger: 0.6, source: 'mech' });
       }
     }
   }
@@ -399,10 +401,10 @@ export class Mech {
     const g = this.game;
     const f = new THREE.Vector3(Math.cos(this.yaw) * side * 6.5 * this.scale, 0, -Math.sin(this.yaw) * side * 6.5 * this.scale).add(this.pos);
     audio.play('stomp', f, 0.55);
-    g.fx.dust(f.setY(2), 0.5, 5);
+    g.fx.dust(f.setY(this.pos.y + 2), 0.5, 5);
     g.shake(0.15);
     g.city.crushCars(f.x, f.z, 8 * this.scale);
-    if (f.z < g.city.waterEdge) for (let i = 0; i < 6; i++) g.fx.steam(f, 0.4);
+    if (f.z < g.city.waterEdge || this.pos.y < -2) for (let i = 0; i < 6; i++) g.fx.steam(f, 0.4);
   }
 
   takeDamage(amount, from) {

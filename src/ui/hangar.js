@@ -198,6 +198,7 @@ export class Hangar {
       { id: 'endless', label: 'ENDLESS', sub: 'no end' },
       { id: 'smash', label: 'FREE SMASH', sub: 'K kaiju, T tripod' },
       { id: 'invasion', label: 'INVASION', sub: 'tripods!' },
+      { id: 'freeplay', label: 'FREE PLAY', sub: 'huge map' },
     ], st.mode, (v) => { st.mode = v; saveSettings(st); this.refreshUI(); });
     this.opt('hg-settings', [
       { id: 'voice', label: st.voice ? 'VOICE ON' : 'VOICE OFF' },

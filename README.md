@@ -59,7 +59,9 @@ Patrick's full design is in `docs/chapter-2-design.md`. Built so far:
 - **Kaiju and tripods fight each other.**
 - **INVASION mode** in the hangar mixes tripods and kaiju. In Free Smash, press **T** to call a tripod.
 
-Still to come: the huge map, survivor camps and bunkers, the Harvester and Uber Pod, the campaign, and the new space intro.
+- **FREE PLAY mode: the huge map.** A destroyed city next to a giant hill you can climb, a beach and a stormy sea to the north, a river with a broken bridge, a forest, south hills, and a crater holding the head of a wrecked tripod (get too close and monsters crawl out). Kaiju and tripods turn up anywhere around you. Hills block a tripod's scanner. The radar shows where each place is. Beating an enemy repairs 30% of your armor until survivor camps are built.
+
+Still to come: survivor camps and bunkers, the Harvester and Uber Pod, the campaign, and the new space intro.
 
 ### Modes
 
@@ -93,6 +95,7 @@ src/
   game.js            battle: camera, waves, spawning, combat, win/lose
   config.js          frames, weapons, kaiju categories, waves
   world/city.js      city grid, power plant, destruction and debris
+  world/wasteland.js chapter 2's huge map: terrain, ruined city, landmarks, storm
   entities/          Jaeger, kaiju, pilot, military, drones, projectiles
   scenes/drop.js     space station and atmospheric entry cinematic
   ui/                hangar, HUD, navigator

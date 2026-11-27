@@ -105,8 +105,9 @@ export class Projectiles {
           hit = { point: bh.point };
         }
       }
-      if (!hit && p.pos.y <= 0.5) {
-        hit = { point: p.pos.clone().setY(1) };
+      const floor = hit ? 0 : g.city.groundAt(p.pos.x, p.pos.z);
+      if (!hit && p.pos.y <= floor + 0.5) {
+        hit = { point: p.pos.clone().setY(floor + 1) };
         g.city.damageArea(hit.point, 6, p.damage * 0.5, { source: p.owner, noFx: true });
       }
       if (hit) {

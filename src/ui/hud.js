@@ -76,6 +76,7 @@ export class HUD {
     this.pilotRow.classList.toggle('hidden', !pilotOut);
     if (pilotOut) this.pilot.style.width = `${(g.pilot.hp / g.pilot.maxHp) * 100}%`;
     this.plant.style.width = `${g.city.plantIntegrity() * 100}%`;
+    this.plant.parentElement.parentElement.style.display = g.city.noPlant ? 'none' : '';
     this.wave.textContent = g.waveLabel();
     this.alertT -= dt;
     if (this.alertT <= 0 && this.alertEl.textContent) { this.alertEl.textContent = ''; this.alertEl.classList.remove('blink'); }
@@ -199,10 +200,25 @@ export class HUD {
       c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
     }
     // plant
-    const pc = g.city.plantCenter;
-    const [px, py] = toR(pc.x, pc.z);
-    c.fillStyle = '#ffd23a'; c.fillRect(px - 6, py - 6, 12, 12);
-    c.fillStyle = '#000'; c.font = 'bold 9px sans-serif'; c.textAlign = 'center'; c.fillText('P', px, py + 3);
+    c.textAlign = 'center';
+    if (!g.city.noPlant) {
+      const pc = g.city.plantCenter;
+      const [px, py] = toR(pc.x, pc.z);
+      c.fillStyle = '#ffd23a'; c.fillRect(px - 6, py - 6, 12, 12);
+      c.fillStyle = '#000'; c.font = 'bold 9px sans-serif'; c.fillText('P', px, py + 3);
+    }
+    // places on the huge map, pinned to the rim when they are far away
+    if (g.city.places) {
+      c.font = 'bold 9px Orbitron, sans-serif';
+      for (const key in g.city.places) {
+        const pl = g.city.places[key];
+        let [x, y] = toR(pl.x, pl.z);
+        const d = Math.hypot(x, y);
+        if (d > R - 12) { x *= (R - 12) / d; y *= (R - 12) / d; }
+        c.fillStyle = 'rgba(255,225,140,0.9)';
+        c.fillText(pl.name.replace('THE ', '').split(' ').pop().slice(0, 6), x, y + 3);
+      }
+    }
     // warnings: fuzzy zones
     for (const w of g.warnings) {
       const [wx, wy] = toR(w.zone.x, w.zone.z);

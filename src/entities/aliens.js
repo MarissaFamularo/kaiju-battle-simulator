@@ -67,6 +67,7 @@ export class Aliens {
     this.game.scene.add(g);
     const a = Math.random() * Math.PI * 2;
     const to = new THREE.Vector3(mech.pos.x + Math.cos(a) * 42, 0, mech.pos.z + Math.sin(a) * 42).addScaledVector(mech.vel, 1.2);
+    to.y = this.game.city.groundAt(to.x, to.z);
     const T = 2.0, G = 60;
     const vel = to.clone().sub(from).divideScalar(T);
     vel.y = (to.y - from.y + 0.5 * G * T * T) / T;
@@ -119,8 +120,9 @@ export class Aliens {
         c.g.position.copy(c.pos);
         c.g.rotation.x += dt * 5;
         g.fx.smokeTrail(c.pos, 1.2);
-        if (c.pos.y <= 3.5) {
-          c.pos.y = 3.5; c.landed = true; c.t = 0;
+        const floor = g.city.groundAt(c.pos.x, c.pos.z) + 3.5;
+        if (c.pos.y <= floor) {
+          c.pos.y = floor; c.landed = true; c.t = 0;
           c.g.position.copy(c.pos);
           c.g.rotation.set(Math.PI / 2, 0, Math.random() * 3);
           g.fx.groundDust(c.pos, 30, 14);
@@ -147,7 +149,7 @@ export class Aliens {
           const d = Math.hypot(dx, dz);
           a.yaw = Math.atan2(dx, dz);
           a.pos.x += dx / d * 36 * dt; a.pos.z += dz / d * 36 * dt;
-          a.pos.y = Math.abs(Math.sin(a.t * 9)) * 1.6;
+          a.pos.y = g.city.groundAt(a.pos.x, a.pos.z) + Math.abs(Math.sin(a.t * 9)) * 1.6;
           if (d < 9 * m.scale) {
             a.state = 'on';
             a.ang = Math.atan2(-dx, -dz) - m.yaw; // which side it grabbed
@@ -186,8 +188,9 @@ export class Aliens {
         a.pos.addScaledVector(a.vel, dt);
         a.g.position.copy(a.pos);
         a.g.rotation.x += dt * 7; a.g.rotation.z += dt * 4;
-        if (a.pos.y <= 0) {
-          a.pos.y = 0; a.state = 'splat'; a.t = 0;
+        const floor = g.city.groundAt(a.pos.x, a.pos.z);
+        if (a.pos.y <= floor) {
+          a.pos.y = floor + 0.2; a.state = 'splat'; a.t = 0;
           a.g.position.copy(a.pos);
           a.g.rotation.set(0, Math.random() * 6, 0);
           a.g.scale.set(1.9, 0.14, 1.9);
@@ -223,7 +226,8 @@ export class Aliens {
   spawnAlien(at) {
     const { g, legs } = makeAlien();
     this.game.scene.add(g);
-    const pos = at.clone().setY(0);
+    const pos = at.clone();
+    pos.y = this.game.city.groundAt(pos.x, pos.z);
     pos.x += (Math.random() - 0.5) * 6; pos.z += (Math.random() - 0.5) * 6;
     this.list.push({ g, legs, pos, center: pos.clone(), vel: new THREE.Vector3(), state: 'run', hp: 2, t: Math.random() * 3, yaw: 0, seed: Math.random() * 9 });
     audio.play('bonk', at, 0.6);

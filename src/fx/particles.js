@@ -228,7 +228,7 @@ export class Particles {
   groundDust(pos, radius, n = 30) {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
-      _p.set(pos.x + Math.cos(a) * radius * 0.3, 2, pos.z + Math.sin(a) * radius * 0.3);
+      _p.set(pos.x + Math.cos(a) * radius * 0.3, Math.max(2, pos.y), pos.z + Math.sin(a) * radius * 0.3);
       _v.set(Math.cos(a), 0.15, Math.sin(a)).multiplyScalar(radius * (0.8 + Math.random() * 0.8));
       this.alpha.spawn(_p, _v, 1.8 + Math.random(), 16, 50, COL.dustA, COL.dustB, 0.5, 1, 1.5);
     }

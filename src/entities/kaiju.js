@@ -25,7 +25,7 @@ export class Kaiju {
     this.root.scale.setScalar(this.scale);
     this.radius = this.model.radius * this.scale;
     this.height = this.model.height * this.scale;
-    this.pos = new THREE.Vector3(x, 0, z);
+    this.pos = new THREE.Vector3(x, game.city.groundAt(x, z), z);
     this.vel = new THREE.Vector3();
     this.yaw = Math.atan2(-x, -z) + (Math.random() - 0.5);
     this.from = from;
@@ -53,7 +53,7 @@ export class Kaiju {
     this.knock = new THREE.Vector3();
     game.scene.add(this.root);
     this.body = game.physics.kinematicBall(x, -50, z, this.radius * 0.9);
-    this.root.position.set(x, -this.height * 1.1, z);
+    this.root.position.set(x, this.pos.y - this.height * 1.1, z);
     this.root.rotation.y = this.yaw;
     this.updateHitCache();
   }
@@ -82,12 +82,13 @@ export class Kaiju {
       this.pos.addScaledVector(this.knock, dt);
       this.knock.multiplyScalar(Math.max(0, 1 - dt * 4));
     }
-    const B = WORLD.bound + 400;
+    const B = g.city.bound + 400;
     this.pos.x = THREE.MathUtils.clamp(this.pos.x, -B, B);
     this.pos.z = THREE.MathUtils.clamp(this.pos.z, -B - 600, B);
+    this.pos.y = g.city.groundAt(this.pos.x, this.pos.z);
 
     this.animate(dt);
-    if (this.state !== 'emerge' && this.state !== 'dead') this.root.position.set(this.pos.x, 0, this.pos.z);
+    if (this.state !== 'emerge' && this.state !== 'dead') this.root.position.set(this.pos.x, this.pos.y, this.pos.z);
     this.root.rotation.y = this.yaw;
     this.root.updateMatrixWorld(true);
     this.updateHitCache();
@@ -110,7 +111,7 @@ export class Kaiju {
     const t = Math.min(1, this.stateT / dur);
     if (this.stateT < dt * 1.5) {
       // breach
-      const p = this.pos.clone().setY(5);
+      const p = this.pos.clone().setY(this.pos.y + 5);
       if (this.from === 'water') {
         for (let i = 0; i < 40; i++) g.fx.steam(p.clone().add(new THREE.Vector3((Math.random() - 0.5) * 60, 0, (Math.random() - 0.5) * 60)), 1.2);
       } else {
@@ -125,7 +126,7 @@ export class Kaiju {
     }
     // rumble out of the ground
     const ease = 1 - (1 - t) ** 3;
-    this.root.position.set(this.pos.x + (Math.random() - 0.5) * (1 - t) * 3, -this.height * 1.1 * (1 - ease), this.pos.z);
+    this.root.position.set(this.pos.x + (Math.random() - 0.5) * (1 - t) * 3, this.pos.y - this.height * 1.1 * (1 - ease), this.pos.z);
     this.root.rotation.x = (1 - ease) * -0.6;
     if (Math.random() < 0.5) {
       const p = this.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * this.radius * 3, 2, (Math.random() - 0.5) * this.radius * 3));
@@ -304,7 +305,7 @@ export class Kaiju {
       const head = this.model.j.head;
       const from = head.localToWorld(new THREE.Vector3(0, 0, 14));
       if (T) {
-        const tp = T.pos.clone().setY(T.kind === 'mech' ? 35 : T.pos.y + 2);
+        const tp = T.pos.clone().setY(T.pos.y + (T.kind === 'mech' ? 35 : 2));
         const dist = tp.distanceTo(from);
         const lead = T.ent.vel ? T.ent.vel.clone().multiplyScalar(dist / 240) : new THREE.Vector3();
         const dir = tp.add(lead).sub(from).normalize();
@@ -315,12 +316,12 @@ export class Kaiju {
     }
     let center, radius, dmg = this.dmg;
     if (a.type === 'tail') {
-      center = this.pos.clone().setY(15 * this.scale);
+      center = this.pos.clone().setY(this.pos.y + 15 * this.scale);
       radius = reach * 1.25;
       dmg *= 0.8;
       audio.play('swing', this.pos, 1);
     } else if (a.type === 'slam') {
-      center = this.pos.clone().addScaledVector(f, reach * 0.8).setY(4);
+      center = this.pos.clone().addScaledVector(f, reach * 0.8).setY(this.pos.y + 4);
       radius = reach * 0.9;
       dmg *= 1.2;
       g.fx.groundDust(center, 70, 40);
@@ -330,7 +331,7 @@ export class Kaiju {
       audio.play('smallBoom', center, 1);
       g.shake(1.1, center);
     } else {
-      center = this.pos.clone().addScaledVector(f, reach * 0.75).setY(a.type === 'bite' ? 35 * this.scale : 28 * this.scale);
+      center = this.pos.clone().addScaledVector(f, reach * 0.75).setY(this.pos.y + (a.type === 'bite' ? 35 * this.scale : 28 * this.scale));
       radius = reach * 0.7;
       audio.play(a.type === 'bite' ? 'punch' : 'swing', this.pos, 1);
     }
@@ -370,7 +371,7 @@ export class Kaiju {
     const t = Math.min(1, this.deadT / 1.6);
     const e = t * t;
     this.root.rotation.z = e * (Math.PI / 2 - 0.15) * this.fallDir;
-    this.root.position.set(this.pos.x, Math.sin(t * Math.PI) * 3, this.pos.z);
+    this.root.position.set(this.pos.x, this.pos.y + Math.sin(t * Math.PI) * 3 - (this.sunk || 0), this.pos.z);
     if (this.deadT > 1.5 && !this.landed) {
       this.landed = true;
       const side = new THREE.Vector3(Math.cos(this.yaw) * this.fallDir * -this.height * 0.4, 5, -Math.sin(this.yaw) * this.fallDir * -this.height * 0.4).add(this.pos);
@@ -382,7 +383,7 @@ export class Kaiju {
     }
     if (this.deadT > 2 && this.deadT < 10 && Math.random() < 0.15) this.game.fx.blood(this.model.hit[1] ? this.hitCache[1].p : this.pos, null);
     if (this.deadT > 14) {
-      this.root.position.y -= dt * 4;
+      this.sunk = (this.sunk || 0) + dt * 4;
       if (this.deadT > 22) this.removeMe = true;
     }
   }
@@ -442,7 +443,7 @@ export class Kaiju {
       this.lastStepSign = s;
       audio.play('stomp', this.pos, 0.7);
       this.game.shake(0.25, this.pos);
-      this.game.fx.dust(this.pos.clone().setY(2), 0.8, 4);
+      this.game.fx.dust(this.pos.clone().setY(this.pos.y + 2), 0.8, 4);
       this.game.city.crushCars(this.pos.x, this.pos.z, this.radius);
     }
     j.hips.position.y = (j.hips.userData.baseY ??= j.hips.position.y) - Math.abs(Math.sin(ph)) * 1.2 * M;
@@ -494,7 +495,7 @@ export class Kaiju {
       seg.rotation.y = Math.sin(t * 2 - i * 0.7) * 0.12 + (spin ? Math.sin(spin) * 0.25 : 0);
       seg.rotation.x = (i === 0 ? -0.12 : 0.02) + Math.sin(t * 1.3 - i * 0.5) * 0.03;
     });
-    if (this.charging > 0) { this.game.fx.dust(this.pos.clone().setY(3), 1, 1); }
+    if (this.charging > 0) { this.game.fx.dust(this.pos.clone().setY(this.pos.y + 3), 1, 1); }
     void armSwing;
   }
 

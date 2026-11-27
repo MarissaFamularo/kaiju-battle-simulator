@@ -94,7 +94,7 @@ export class Pilot {
       this.onGround = true;
       this.chuteOpen = false;
     } else if (this.pos.y > gh + 0.3) this.onGround = false;
-    const B = WORLD.bound;
+    const B = g.city.bound;
     this.pos.x = THREE.MathUtils.clamp(this.pos.x, -B, B);
     this.pos.z = THREE.MathUtils.clamp(this.pos.z, -B, B);
 

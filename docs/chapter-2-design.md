@@ -82,9 +82,9 @@ Kaiju and tripods also **fight each other**.
 
 ## Build order
 
-1. **Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,
+1. **(Built 2026-11-27.) Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,
    horn, lasers, hiding, capsule aliens, tripods vs kaiju). New INVASION mode.
-2. The huge new map with free play.
+2. The huge new map with free play. **(Built 2026-11-27: `src/world/wasteland.js`, FREE PLAY mode.)**
 3. Survivor camps, resources, bunkers, carrying survivors.
 4. Harvester, Uber Pod, Laser Blaster weapon, campaign missions.
 5. The new space intro.

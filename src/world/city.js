@@ -64,6 +64,9 @@ export class City {
     this.fx = fx;
     this.root = new THREE.Group();
     scene.add(this.root);
+    this.kind = 'city';
+    this.bound = WORLD.bound;   // how far from the middle you can walk
+    this.hasTerrain = false;
     this.buildings = [];
     this.hash = new Map();
     this.cell = 60;
@@ -220,8 +223,9 @@ export class City {
     // snap to texel grid to avoid shimmering
     const step = 640 / 2048 * 4;
     const x = Math.round(p.x / step) * step, z = Math.round(p.z / step) * step;
-    s.target.position.set(x, 0, z);
-    s.position.set(x + this.sunDir.x * 900, this.sunDir.y * 900 + 200, z + this.sunDir.z * 900);
+    const gy = this.groundAt(x, z);
+    s.target.position.set(x, gy, z);
+    s.position.set(x + this.sunDir.x * 900, this.sunDir.y * 900 + 200 + gy, z + this.sunDir.z * 900);
   }
 
   // ---------------- buildings ----------------
@@ -393,9 +397,14 @@ export class City {
     return res;
   }
 
+  // ---- terrain: the original city is flat; Wasteland overrides these ----
+  groundAt() { return 0; }
+  terrainBlocks() { return false; }
+  rayGround() { return null; }
+
   // Height of tallest intact building under a point (for pilot standing on roofs etc.)
   heightAt(x, z) {
-    let h = 0;
+    let h = this.groundAt(x, z);
     for (const b of this.near(x, z, 1)) {
       for (const p of b.pieces) {
         if (Math.abs(x - p.x) < p.hx && Math.abs(z - p.z) < p.hz) h = Math.max(h, p.y + p.hy);

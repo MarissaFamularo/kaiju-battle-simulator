@@ -134,7 +134,7 @@ export class Military {
     for (let i = 0; i < 3; i++) {
       const m = buildJet();
       const side = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar((i - 1) * 30);
-      const start = aim.clone().addScaledVector(dir, -1600 - Math.abs(i - 1) * 40).add(side).setY(150);
+      const start = aim.clone().addScaledVector(dir, -1600 - Math.abs(i - 1) * 40).add(side).setY(150 + Math.max(0, g.city.groundAt(aim.x, aim.z)));
       m.g.position.copy(start);
       m.g.lookAt(start.clone().add(dir));
       g.scene.add(m.g);
@@ -196,7 +196,7 @@ export class Military {
     if (k) {
       u.orbitA += dt * 0.25;
       const r = 150 + u.idx * 25;
-      target = new THREE.Vector3(k.pos.x + Math.cos(u.orbitA) * r, 70 + u.idx * 15 + k.height * 0.3, k.pos.z + Math.sin(u.orbitA) * r);
+      target = new THREE.Vector3(k.pos.x + Math.cos(u.orbitA) * r, k.pos.y + 70 + u.idx * 15 + k.height * 0.3, k.pos.z + Math.sin(u.orbitA) * r);
     } else if (leaving) {
       target = u.pos.clone().add(new THREE.Vector3(0, 60, 600));
       if (u.life < -12) u.gone = true;
@@ -253,7 +253,7 @@ export class Military {
       u.vel.lerp(want, Math.min(1, dt * 0.8));
     } else if (u.life < -15) u.gone = true;
     u.pos.addScaledVector(u.vel, dt);
-    u.pos.y += (380 - u.pos.y) * dt;
+    u.pos.y += (380 + Math.max(0, g.city.groundAt(c.x, c.z)) - u.pos.y) * dt;
     u.g.rotation.y = Math.atan2(u.vel.x, u.vel.z);
     u.g.rotation.z = leaving ? 0 : -0.25;
     if (k && u.pos.distanceTo(k.pos) < r * 1.6) {
@@ -267,7 +267,7 @@ export class Military {
       }
       if (u.shellCd <= 0) {
         u.shellCd = 2.5;
-        const tgt = k.pos.clone().setY(k.height * 0.4);
+        const tgt = k.pos.clone().setY(k.pos.y + k.height * 0.4);
         const dir = tgt.sub(u.pos).normalize();
         g.projectiles.fire({ pos: u.pos.clone(), dir, speed: 500, damage: 28, owner: 'military', kind: 'shell', boom: 1, radius: 6, smash: 1 });
         audio.play('smallBoom', u.pos, 0.4);
