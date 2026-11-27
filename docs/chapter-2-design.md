@@ -245,6 +245,22 @@ Built the same day. **Claude's calls:**
 - **ULTRA POD PRIME**: the final boss, 7500 health.
 - **The last ending**: the corruption fades off the Earth and the card says THE WAR IS OVER.
 
+## Story Chapter 2: The Tri Legion
+
+Patrick, 2026-11-27, in his words: "Now a new threat. Now is chapter 2. The tripods team up with the new
+threat." "A new alien, and in this chapter the moon wakes up." "The Tri Legion. They make tripods and have star
+destroyers."
+
+Built the same day. **Claude's calls:**
+- **The Tri Legion** look: black, red and gold, with a three-pointed crest. Legion Trooper (shielded, four
+  lasers), Legion Forge (builds any kind of tripod), LEGION GENERAL (boss).
+- **Star Destroyers** are our own design, not copied from anything: three long prongs around a burning core.
+  They hover, fire a big beam with a red warning ring, and drop Troopers.
+- **The Moon** is alive. In the opening a Star Destroyer fires on it, it cracks, and a giant yellow eye opens.
+  In the sky its eye opens a little more each mission, and in mission 41 it fires Moon Beams at your enemies.
+  **Whether the Moon is a friend is Claude's guess. Patrick has not said. Ask him.**
+- Missions 39 to 41: The Tri Legion, Star Destroyer, The Moon Wakes Up. It ends "To be continued".
+
 ## Build order
 
 1. **(Built 2026-11-27.) Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,

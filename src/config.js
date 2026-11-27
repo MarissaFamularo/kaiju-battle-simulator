@@ -368,6 +368,29 @@ Object.assign(TRIPODS, {
   },
 });
 
+// CHAPTER 2: THE TRI LEGION (Patrick, 2026-11-27): "A new alien... the Tri Legion. They make tripods and
+// have star destroyers." Black, red and gold, with a three-pointed crest. All Claude's calls.
+Object.assign(TRIPODS, {
+  legionTrooper: {
+    id: 'legionTrooper', name: 'Legion Trooper', short: 'Trooper', size: 1.2, hull: 1.15, legion: true,
+    hp: 1300, speed: 17, laser: 8, minigun: 4, fireEvery: 2.4, range: 360, cone: 0.24, shield: 250, shieldWait: 6,
+    intro: 'A Legion Trooper! This is what the Tri Legion builds for itself: black and gold, with a shield and four lasers at a time.',
+  },
+  legionForge: {
+    id: 'legionForge', name: 'Legion Forge', short: 'Forge', size: 1.6, hull: 1.8, legion: true, boss: '#ffb03a', radar: 4,
+    hp: 2400, speed: 6, laser: 0, fireEvery: 99, range: 300, cone: 0.24,
+    summon: { types: ['attacker', 'gatling', 'boom', 'baby', 'flame', 'blink'], every: 10, max: 5, always: true },
+    intro: 'A Legion Forge! The Tri Legion MAKE the tripods, and this is how. It can build any kind. Destroy it!',
+  },
+  legionGeneral: {
+    id: 'legionGeneral', name: 'LEGION GENERAL', short: 'General', size: 2.4, hull: 2.1, legion: true, boss: '#ff3a1a', radar: 4,
+    hp: 5000, speed: 12, laser: 5, minigun: 6, fireEvery: 3, big: 24, bigEvery: 7, bigRange: 640, storm: 22, stormEvery: 8, stomp: 55,
+    shield: 500, shieldWait: 6, range: 620, cone: 0.3, lose: 14, far: 700,
+    summon: { type: 'legionTrooper', every: 28, max: 2 },
+    intro: 'The LEGION GENERAL! The leader of the Tri Legion on Earth. Shield, lasers, lightning, and it calls Troopers. Everything we have, right now!',
+  },
+});
+
 // Invasion mode waves: numbers are kaiju categories, 'T' is an attacker tripod.
 export const INVASION_WAVES = [
   ['T'],

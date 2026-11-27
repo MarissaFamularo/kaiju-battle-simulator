@@ -747,4 +747,75 @@ export const MISSIONS = [
     failed: () => null,
     win: 'ULTRA POD PRIME HAS FALLEN! It is over. The war is over!',
   },
+  // ================================================================== CHAPTER 2: THE TRI LEGION
+  // Patrick, 2026-11-27: "Now a new threat. Now is chapter 2. The tripods team up with the new threat."
+  // "A new alien, and in this chapter the moon wakes up." "The Tri Legion. They make tripods and have star
+  // destroyers." The missions are Claude's calls. Whether the Moon is a friend is Claude's guess: ask Patrick.
+  {
+    title: 'The Tri Legion',
+    part: 11, legion: true, cutscene: 'legion', scouts: 3, walkers: 1, allyFrames: ['titan', 'ranger', 'scout'],
+    brief: 'CHAPTER 2: THE TRI LEGION. A new alien has come: the Tri Legion. They are the ones who MADE the tripods, and the tripods that are left have teamed up with them. Their Star Destroyers are in the sky. And something very strange is happening to the Moon. Destroy the first 12 machines they send down!',
+    start(g, s) { s.sent = 0; s.wait = 3; },
+    tick(g, s, dt) {
+      s.wait -= dt;
+      if (s.sent >= 12 || s.wait > 0 || living(g).length + g.warnings.length >= (g.lowPower ? 4 : 5)) return;
+      s.wait = 6; s.sent++;
+      const type = s.sent % 3 === 0 ? 'legionTrooper' : ['attacker', 'gatling', 'tank', 'flame', 'blink', 'sprinter'][Math.floor(Math.random() * 6)];
+      const a = g.view.yaw + (Math.random() - 0.5) * 2.4, d = 280 + Math.random() * 240, B = g.city.bound - 200;
+      g.spawnAwake(type, Math.max(-B, Math.min(B, g.mech.pos.x + Math.sin(a) * d)), Math.max(g.city.waterEdge + 150, Math.min(B, g.mech.pos.z + Math.cos(a) * d)));
+      if (type === 'legionTrooper' && s.sent === 3) g.nav.say('rise_legionTrooper', 'A Legion Trooper! This is what the Tri Legion builds for itself: black and gold, with a shield and four lasers at a time.', 3, 0);
+    },
+    goal: (g) => `Destroy the Tri Legion's first wave (${Math.min(12, g.stats.tripods)}/12)`,
+    done: (g, s) => s.sent >= 12 && g.stats.tripods >= 12 && noneComing(g),
+    failed: () => null,
+    win: 'The first wave is beaten. Did you see the Moon? There is a crack in it. A glowing one.',
+  },
+  {
+    title: 'Star Destroyer',
+    part: 11, legion: true, scouts: 4, walkers: 2, friends: 1, allyFrames: ['titan', 'ranger', 'titan', 'scout'],
+    brief: 'A Star Destroyer is coming down: three giant prongs around a burning core. It fires a huge beam (get out of the red ring!) and it drops Legion Troopers. Shoot the glowing blue core underneath it and bring it down. Then a Legion Forge shows up to build more.',
+    start(g, s) { g.queueShip(['legionTrooper', 'legionTrooper', 'legionTrooper'], 'destroyer'); s.sent = true; s.forge = false; g.moonAwake = 0.25; },
+    tick(g, s) {
+      if (!s.forge && beaten(g, 'destroyer') >= 1) {
+        s.forge = true;
+        const m = g.mech.pos, B = g.city.bound - 250;
+        g.spawnAwake('legionForge', Math.max(-B, Math.min(B, m.x + Math.sin(g.mech.yaw) * 420)), Math.max(g.city.waterEdge + 200, Math.min(B, m.z + Math.cos(g.mech.yaw) * 420)));
+        g.hud.alert('A LEGION FORGE!', 4, true);
+        g.nav.say('rise_legionForge', 'A Legion Forge! The Tri Legion MAKE the tripods, and this is how. It can build any kind. Destroy it!', 3, 0);
+      }
+    },
+    goal: (g, s) => (!beaten(g, 'destroyer') ? 'Shoot down the Star Destroyer' : !beaten(g, 'legionForge') ? 'Destroy the Legion Forge' : 'Destroy everything it built'),
+    done: (g, s) => s.forge && beaten(g, 'legionForge') >= 1 && noneComing(g),
+    failed: () => null,
+    win: 'One Star Destroyer down, and no more Forge. Look up. The Moon has opened one eye.',
+  },
+  {
+    title: 'The Moon Wakes Up',
+    part: 11, legion: true, scouts: 4, walkers: 2, friends: 1, allyFrames: ['titan', 'ranger', 'titan', 'scout'],
+    brief: 'The LEGION GENERAL is here with two Star Destroyers. It is the hardest fight yet. But you are not alone: the Moon is awake. It was never just a rock. It is watching, and every little while it fires a Moon Beam at your enemies. Defeat the General!',
+    start(g, s) {
+      const m = g.mech.pos, B = g.city.bound - 300;
+      g.spawnAwake('legionGeneral', Math.max(-B, Math.min(B, m.x + Math.sin(g.mech.yaw) * 560)), Math.max(g.city.waterEdge + 250, Math.min(B, m.z + Math.cos(g.mech.yaw) * 560)));
+      g.queueShip(['legionTrooper'], 'destroyer'); g.queueShip(['legionTrooper'], 'destroyer');
+      s.sent = true; s.beam = 12; g.moonAwake = 0.3;
+      g.hud.alert('THE LEGION GENERAL', 5, true);
+      g.nav.say('rise_legionGeneral', 'The LEGION GENERAL! The leader of the Tri Legion on Earth. Shield, lasers, lightning, and it calls Troopers. Everything we have, right now!', 3, 0);
+    },
+    tick(g, s, dt) {
+      g.moonAwake = Math.min(1, (g.moonAwake || 0) + dt * 0.05);
+      if (g.moonAwake < 0.95) return;
+      if (!s.said) { s.said = true; g.hud.alert('THE MOON IS AWAKE!', 5, true); g.nav.say('moonAwake', 'Look at the Moon! Its eye is wide open. It is alive, and it is on OUR side!', 3, 0); }
+      s.beam -= dt;
+      if (s.beam > 0) return;
+      s.beam = 16;
+      // it aims at the biggest enemy still standing
+      let best = null;
+      for (const k of g.kaijus) if (!k.dead && !k.friendly && !k.emerging && (!best || k.maxHp > best.maxHp)) best = k;
+      g.moonBeam(best);
+    },
+    goal: (g) => (beaten(g, 'legionGeneral') ? 'Destroy the last of the Legion here' : 'Defeat the LEGION GENERAL'),
+    done: (g, s) => s.sent && beaten(g, 'legionGeneral') >= 1 && noneComing(g),
+    failed: () => null,
+    win: 'The General has fallen! The Moon is awake, and it is turning to look at the rest of the Star Destroyers. To be continued...',
+  },
 ];

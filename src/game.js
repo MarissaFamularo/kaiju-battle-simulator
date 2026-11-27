@@ -17,6 +17,7 @@ import { MISSIONS, unlockMission } from './campaign.js';
 import { SpawnMenu } from './ui/spawnMenu.js';
 import { Scouts } from './entities/scouts.js';
 import { AlienShip, CoreReactor } from './entities/ship.js';
+import { buildStarDestroyer } from './scenes/legion.js';
 import { TRIPODS } from './config.js';
 import { audio } from './audio.js';
 
@@ -56,7 +57,7 @@ export class Game {
     this.scouts = new Scouts(this); // friendly scout Jaegers
     this.camps = kind === 'wasteland' ? new Camps(this) : null; // survivor camps and bunkers
     this.kaijus = [];
-    this.sky = null; this.shieldDome = null; this.shieldDown = false; this.rift = null; this.riftK = 0;
+    this.sky = null; this.shieldDome = null; this.shieldDown = false; this.rift = null; this.riftK = 0; this.moonEye = null; this.moonBall = null; this.moonAwake = 0;
     this.warnings = [];
     this.mech = null;
     this.pilot = null;
@@ -135,7 +136,7 @@ export class Game {
     this.attacked = false;
     audio.intensity = 0.2;
     this.clouds();
-    if ((this.mission && this.mission.part >= 3 && !this.mission.core && !this.mission.alien && !this.mission.corrupt) || mode === 'freeplay') this.skyFleet();
+    if ((this.mission && this.mission.part >= 3 && !this.mission.core && !this.mission.alien && !this.mission.corrupt && !this.mission.legion) || mode === 'freeplay') this.skyFleet();
     if (grounded) this.startGrounded();
   }
 
@@ -211,8 +212,8 @@ export class Game {
     const ship = new AlienShip(this, { type, x, z, cargo });
     this.kaijus.push(ship);
     audio.play('alarm');
-    this.hud.alert(type === 'mothership' ? 'THE MOTHERSHIP IS ENTERING THE ATMOSPHERE' : 'ALIEN SHIP ENTERING THE ATMOSPHERE', 5, true);
-    this.nav.say(type === 'mothership' ? 'mothership' : 'shipWarn', type === 'mothership'
+    this.hud.alert(type === 'destroyer' ? 'STAR DESTROYER COMING DOWN' : type === 'mothership' ? 'THE MOTHERSHIP IS ENTERING THE ATMOSPHERE' : 'ALIEN SHIP ENTERING THE ATMOSPHERE', 5, true);
+    this.nav.say(type === 'destroyer' ? 'destroyerWarn' : type === 'mothership' ? 'mothership' : 'shipWarn', type === 'destroyer' ? 'A Tri Legion Star Destroyer! Three prongs and a burning core. It fires a huge beam: get out of the red ring. Shoot the glowing blue core underneath it!' : type === 'mothership'
       ? 'That is the Mothership! It is enormous, and it is full of tripods. Aim for the glowing core underneath it!'
       : 'A ship is coming down out of orbit! Look up. It will drop tripods that are already awake. Shoot the glowing core underneath it!', 3, 0);
     return ship;
@@ -299,6 +300,49 @@ export class Game {
       const c = new THREE.Mesh(new THREE.ConeGeometry(5 + Math.random() * 10, h, 5), i % 2 ? spire : spire2);
       c.position.set(x, this.city.groundAt(x, z) + h / 2 - 4, z); this.scene.add(c);
     }
+  }
+
+  // Chapter 2: Star Destroyers hang in the sky, and so does the Moon, which is alive. this.moonAwake (0 to 1) opens its eye.
+  enterLegionSky() {
+    const sky = this.sky = new THREE.Group();
+    const noFog = { fog: false, depthWrite: false };
+    const ships = this.skyShips = new THREE.Group();
+    for (let i = 0; i < (this.lowPower ? 5 : 9); i++) {
+      const d = buildStarDestroyer(1.6 + (i % 3) * 0.7);
+      d.traverse((o) => { if (o.material) { o.material = o.material.clone(); o.material.fog = false; } });
+      const a = i * 0.7 + 0.3, r = 2600 + (i % 4) * 700;
+      d.position.set(Math.cos(a) * r, 1900 + (i % 3) * 500, Math.sin(a) * r); d.rotation.x = Math.PI / 2; d.rotation.z = i;
+      ships.add(d);
+    }
+    sky.add(ships);
+    const moon = this.skyWreck = new THREE.Group();
+    const ball = new THREE.Group(); ball.position.set(-2600, 3700, -3800);
+    ball.add(new THREE.Mesh(new THREE.SphereGeometry(620, 32, 22), new THREE.MeshBasicMaterial({ color: '#c4c4d0', ...noFog })));
+    const crater = new THREE.MeshBasicMaterial({ color: '#9a9aaa', ...noFog });
+    for (let i = 0; i < 12; i++) { const c = new THREE.Mesh(new THREE.CircleGeometry(40 + Math.random() * 80, 14), crater); const d = new THREE.Vector3().randomDirection(); c.position.copy(d).multiplyScalar(623); c.lookAt(d.clone().multiplyScalar(1500)); ball.add(c); }
+    const eye = this.moonEye = new THREE.Group();
+    const white = new THREE.Mesh(new THREE.SphereGeometry(230, 24, 16), new THREE.MeshBasicMaterial({ color: '#ffe27a', ...noFog })); white.scale.z = 0.2; eye.add(white);
+    const pupil = this.moonPupil = new THREE.Mesh(new THREE.SphereGeometry(100, 16, 12), new THREE.MeshBasicMaterial({ color: '#12060a', ...noFog })); pupil.scale.set(0.5, 1, 0.3); pupil.position.z = 40; eye.add(pupil);
+    const toYou = new THREE.Vector3(2600, -3700, 3800).normalize();
+    eye.position.copy(toYou).multiplyScalar(600); eye.lookAt(toYou.clone().multiplyScalar(3000));
+    ball.add(eye); moon.add(ball);
+    this.moonBall = ball;
+    sky.add(moon);
+    this.scene.add(sky);
+  }
+
+  // The Moon helps: a pale beam from the sky onto one enemy.
+  moonBeam(target) {
+    if (!target || !this.moonBall) return;
+    const to = target.hitCache ? target.hitCache[0].p.clone() : target.pos.clone();
+    const from = this.moonBall.getWorldPosition(new THREE.Vector3()).sub(to).normalize().multiplyScalar(1400).add(to);
+    for (let i = 0; i <= 26; i++) this.fx.glow(from.clone().lerp(to, i / 26), new THREE.Color('#fff2b0'), 70, 0.7);
+    this.fx.explosion(to, 1.8); this.fx.flash(to, '#fff2b0', 12000, 0.4);
+    audio.play('thunder', to, 1.3); this.shake(1, to);
+    target.shield = 0;
+    target.takeDamage(600, to, null, { source: 'moon', weapon: 'laser' });
+    this.hud.alert('MOON BEAM!', 2.5);
+    this.nav.say('moonBeam', 'The Moon is helping us! That beam came from its eye!', 2, 25);
   }
 
   // Part 6: the Earth has been corrupted. A sick green haze, purple growths all over the land, glowing nests.
@@ -627,7 +671,8 @@ enterRift(count = 1, unstable = false) {
     if (this.sky) { // the fleet and the broken planet stay far away, and the ships circle slowly
       this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
       this.skyShips.rotation.y += rawDt * (this.shieldDome ? 0.004 : 0.012);
-      this.skyWreck.rotation.y += rawDt * (this.shieldDome ? 0.001 : 0.01);
+      if (!this.moonEye) this.skyWreck.rotation.y += rawDt * (this.shieldDome ? 0.001 : 0.01); // (the Moon stays put)
+      if (this.moonEye) { const w = this.moonAwake || 0; this.moonEye.scale.set(1, Math.max(0.02, w), 1); this.moonPupil.position.x = Math.sin(this.time * 0.7) * 70 * w; }
       if (this.rift) for (const r of this.riftList) {
         const u = r.userData, wob = this.riftUnstable ? Math.sin(this.time * 7 + u.phase) * 0.06 + (Math.random() < 0.04 ? 0.12 : 0) : Math.sin(this.time * 2) * 0.015;
         const k = Math.max(0.01, (0.25 + this.riftK * 0.85) * u.size + wob);
@@ -810,6 +855,7 @@ enterRift(count = 1, unstable = false) {
     if (this.app.settings.music) audio.startMusic();
     // scout Jaegers help out everywhere except the story modes
     if (this.mission && this.mission.scouts) this.scouts.deploy(this.mission.scouts, this.mission.scoutPower || 1, this.mission.allyFrames || ['scout']); // some missions bring a squadron
+    if (this.mission && this.mission.legion) this.enterLegionSky();
     if (this.mission && this.mission.corrupt) this.enterCorruption();
     if (this.mission && this.mission.rift) this.enterRift(this.mission.rift === true ? 1 : this.mission.rift, !!this.mission.storm);
     if (this.megaOn && this.scene.fog) { this.scene.fog.near = 1100; this.scene.fog.far = 7000; } // you are 5 times bigger, so you see 5 times farther

@@ -5,11 +5,14 @@ import * as THREE from 'three';
 import { TRIPODS } from '../config.js';
 import { audio } from '../audio.js';
 import { Tripod } from './tripod.js';
+import { buildStarDestroyer } from '../scenes/legion.js';
 
 const NAMES = ['Viper', 'Talon', 'Raven', 'Scythe', 'Mantis', 'Hornet', 'Wraith', 'Cobra'];
 let nameIdx = 0;
 export const SHIPS = {
   ship: { id: 'ship', name: 'Alien Dropship', short: 'Dropship', scale: 1, hp: 850, alt: 190, dropEvery: 7, laser: 5, fireEvery: 3.4, leaves: true },   // drops its tripods, then flies away
+  // Chapter 2: a Tri Legion Star Destroyer. Three prongs around a burning core. It stays, drops Troopers, and fires a big beam.
+  destroyer: { id: 'destroyer', name: 'Star Destroyer', short: 'Star Destroyer', scale: 1, hp: 3200, alt: 330, dropEvery: 16, laser: 6, fireEvery: 2.8, boss: true, tri: true, beam: 38, beamEvery: 9 },
   mothership: { id: 'mothership', name: 'The Mothership', short: 'Mothership', scale: 2.6, hp: 4200, alt: 250, dropEvery: 22, laser: 6, fireEvery: 2.4, boss: true },
 };
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
@@ -24,6 +27,13 @@ function buildShip(spec) {
     weak: new THREE.MeshStandardMaterial({ color: '#000', emissive: '#38d8ff', emissiveIntensity: 3 }),
   };
   const root = new THREE.Group();
+  if (spec.tri) {
+    // lying flat overhead, prongs out, with the weak spot (its core) underneath
+    const d = buildStarDestroyer(0.55); d.rotation.x = Math.PI / 2; root.add(d);
+    const core = new THREE.Mesh(new THREE.SphereGeometry(12, 14, 10), mats.weak); core.position.y = -12; root.add(core);
+    const gun = new THREE.Object3D(); gun.position.set(0, -14, 0); root.add(gun);
+    return { root, core, gun, bay: core, mats };
+  }
   const M = (geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; root.add(m); return m; };
   const hull = M(new THREE.SphereGeometry(30, 28, 16), mats.hull); hull.scale.set(1, 0.3, 1.5);       // long flat body, +Z is forward
   const top = M(new THREE.SphereGeometry(13, 18, 12), mats.dark, 0, 6, 6); top.scale.set(1, 0.6, 1.4);
@@ -49,7 +59,8 @@ export class AlienShip {
     this.type = type;
     this.spec = SHIPS[type];
     this.cat = this.spec.boss ? 4 : 3;
-    this.name = this.spec.boss ? 'Mothership' : `Dropship ${NAMES[nameIdx++ % NAMES.length]}`;
+    this.name = this.spec.tri ? `Star Destroyer ${NAMES[nameIdx++ % NAMES.length]}` : this.spec.boss ? 'Mothership' : `Dropship ${NAMES[nameIdx++ % NAMES.length]}`;
+    this.beamCd = 6; this.beamAt = null;
     this.maxHp = this.hp = this.spec.hp;
     this.radius = 30 * this.spec.scale; this.height = 30 * this.spec.scale; this.scale = 1;
     this.cargo = [...cargo];
@@ -129,6 +140,30 @@ export class AlienShip {
         g.nav.say('shipLeave', 'The ship dropped everything it had, and now it is flying away. Get the tripods!', 2, 15);
         this.place();
         return;
+      }
+      // Star Destroyer: a big beam straight down at where you are standing, after a red warning ring
+      if (sp.beam && g.state === 'play' && g.mech && !g.mech.dead) {
+        this.beamCd -= dt;
+        if (this.beamCd <= 0 && !this.beamAt && Math.hypot(g.mech.pos.x - this.pos.x, g.mech.pos.z - this.pos.z) < 700) {
+          this.beamCd = sp.beamEvery + Math.random() * 2;
+          this.beamAt = { x: g.mech.pos.x, z: g.mech.pos.z, t: 1.7 };
+          audio.play('alarm', g.mech.pos, 0.5);
+          g.nav.say('destroyerBeam', 'The Star Destroyer is aiming its beam at you! Get out of the red ring!', 2, 16);
+        }
+        if (this.beamAt) {
+          const b = this.beamAt, gy = g.city.groundAt(b.x, b.z);
+          b.t -= dt;
+          if (Math.random() < 0.6) g.fx.ring(_a.set(b.x, gy + 1.5, b.z), 30, 34, 0.25, '#ff3a1a', 0.8);
+          if (b.t <= 0) {
+            this.beamAt = null;
+            for (let i = 0; i <= 16; i++) g.fx.glow(_a.set(this.pos.x + (b.x - this.pos.x) * (i / 16), this.pos.y + (gy - this.pos.y) * (i / 16), this.pos.z + (b.z - this.pos.z) * (i / 16)), RED, 60, 0.5);
+            const hit = new THREE.Vector3(b.x, gy + 4, b.z);
+            g.fx.explosion(hit, 2); g.city.damageArea(hit, 40, 900, { source: 'tripod', force: 1.8 });
+            audio.play('explosion', hit, 1.3); g.shake(1.5, hit);
+            if (Math.hypot(g.mech.pos.x - b.x, g.mech.pos.z - b.z) < 36 + g.mech.radius) g.mech.takeDamage(sp.beam * (g.mech.mega > 1 ? 4 : 1), hit);
+            if (g.pilot && !g.pilot.dead && Math.hypot(g.pilot.pos.x - b.x, g.pilot.pos.z - b.z) < 30) g.pilot.takeDamage(sp.beam * 0.5, hit);
+          }
+        }
       }
       // a light laser of its own
       this.fireCd -= dt;

@@ -43,6 +43,10 @@ const CHOICES = [
   { id: 'overlord', label: 'Boss Pod: Overlord' },
   { id: 'friend', label: 'FRIEND: a linked kaiju', ally: true },
   { id: 'walker', label: 'FRIEND: a human Guardian Walker', ally: true },
+  { id: 'legionTrooper', label: 'Legion Trooper' },
+  { id: 'legionForge', label: 'Legion Forge (builds any tripod)' },
+  { id: 'legionGeneral', label: 'LEGION GENERAL' },
+  { id: 'destroyer', label: 'Star Destroyer' },
   { id: 'ship', label: 'Alien Dropship (drops 2, then leaves)' },
   { id: 'mothership', label: 'The Mothership' },
 ];
@@ -106,6 +110,7 @@ export class SpawnMenu {
     if (/^k\d$/.test(c.id)) g.queueKaiju(+c.id[1]);
     else if (c.id === 'baby') { const m = g.mech.pos, a = g.view.yaw; for (let i = 0; i < 4; i++) g.spawnAwake('baby', m.x + Math.sin(a) * 260 + (i - 1.5) * 40, m.z + Math.cos(a) * 260 + (i % 2) * 40); g.hud.alert('BABY TRIPODS!', 3, true); }
     else if (c.id === 'ship') g.queueShip(['attacker', ['sprinter', 'shield', 'mortar', 'ghost', 'splitter', 'sniper', 'repair', 'flame', 'thunder'][Math.floor(Math.random() * 9)]]);
+    else if (c.id === 'destroyer') g.queueShip(['legionTrooper', 'legionTrooper'], 'destroyer');
     else if (c.id === 'mothership') g.queueShip(['attacker', 'flame', 'repair', 'thunder', 'titan'], 'mothership');
     else g.queueTripod(c.id);
   }

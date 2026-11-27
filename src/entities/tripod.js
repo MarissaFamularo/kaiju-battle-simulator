@@ -149,6 +149,13 @@ function buildTripod(spec) {
     for (const sx of [-6, 6]) M(new THREE.CylinderGeometry(0.25, 0.25, 14, 5), mats.dark, sx, 19, -8, body);
     M(new THREE.BoxGeometry(5, 3, 0.3), mats.strip, 8.6, 24, -8, body).castShadow = false; // a little flag
   }
+  if (spec.legion) {
+    // Tri Legion: black and red hull, gold trim, red lights, and a three-pointed crest on top
+    mats.hull.color.set('#2a0a10'); mats.hull.emissive.set('#16040a');
+    mats.trim.color.set('#d8a83a'); mats.trim.emissive.set('#3a2606');
+    mats.strip.emissive.set('#ff3a1a');
+    for (let i = 0; i < 3; i++) { const a = (i / 3) * Math.PI * 2; const sp = M(new THREE.ConeGeometry(1.8, 13, 4), mats.trim, Math.sin(a) * 5, 12, Math.cos(a) * 5 - 2, body); sp.rotation.set(Math.cos(a) * 0.5, 0, -Math.sin(a) * 0.5); }
+  }
   if (spec.tint) { mats.hull.color.set(spec.tint); mats.hull.emissive.set(spec.tint).multiplyScalar(0.18); }
   let bubble = null;
   if (spec.shield) {
@@ -379,14 +386,17 @@ export class Tripod {
     if (sp.summon && sp.summon.always && !this.dead && !this.emerging && g.state === 'play') {
       this.summonCd -= dt;
       const sm = sp.summon;
-      if (this.summonCd <= 0 && g.kaijus.filter((k) => k.type === sm.type && !k.dead).length < sm.max) {
+      // a Legion Forge can build any kind (sm.types); it stops while there are already plenty of tripods around
+      const made = sm.types ? sm.types[Math.floor(Math.random() * sm.types.length)] : sm.type;
+      const have = sm.types ? g.kaijus.filter((k) => k.isTripod && !k.isShip && !k.friendly && !k.dead && k !== this).length : g.kaijus.filter((k) => k.type === sm.type && !k.dead).length;
+      if (this.summonCd <= 0 && have < sm.max) {
         this.summonCd = sm.every;
         const a = Math.random() * 6.28;
         const x = this.pos.x + Math.cos(a) * 60, z = this.pos.z + Math.sin(a) * 60;
-        g.fx.ring(_c.set(x, g.city.groundAt(x, z) + 2, z), 3, 40, 0.5, '#ff9ad8', 0.7);
-        g.kaijus.push(new Tripod(g, { type: sm.type, x, z, awake: true }));
+        g.fx.ring(_c.set(x, g.city.groundAt(x, z) + 2, z), 3, 40, 0.5, sm.types ? '#ffb03a' : '#ff9ad8', 0.7);
+        g.kaijus.push(new Tripod(g, { type: made, x, z, awake: true }));
         audio.play('uiBig', this.pos, 0.7);
-        g.nav.say('factoryMade', `The Factory Pod just built another ${TRIPODS[sm.type].name}! Destroy the factory!`, 2, 25);
+        g.nav.say('factoryMade', `The ${this.spec.name} just built a ${TRIPODS[made].name}! Destroy the ${this.spec.short}!`, 2, 25);
       }
     }
     if (sp.heal && !this.dead && !this.emerging) {
