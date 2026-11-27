@@ -25,7 +25,7 @@ export class Projectiles {
       pos: o.pos.clone(), vel: o.dir.clone().multiplyScalar(o.speed), damage: o.damage, owner: o.owner,
       color: new THREE.Color(o.color || '#ffffff'), size: o.size || 8, radius: o.radius || 3, gravity: o.gravity || 0,
       life: o.life || 4, acid: !!o.acid, smash: o.smash ?? 1, kind: o.kind || 'plasma', boom: o.boom || 0,
-      trail: o.trail || null, src: o.src || null, target: o.target || null, aimIdx: o.aimIdx || 0, age: 0,
+      trail: o.trail || null, src: o.src || null, weapon: o.weapon || null, target: o.target || null, aimIdx: o.aimIdx || 0, age: 0,
     });
   }
 
@@ -71,7 +71,7 @@ export class Projectiles {
             const pt = _a.clone().lerp(_b, best.t);
             const weak = best.h.weak;
             const dmg = p.damage * (weak ? 3 : 1);
-            k.takeDamage(dmg, pt, p.vel.clone().normalize(), { weak, source: p.owner, stagger: p.owner === 'player' ? 0.2 : 0.05 });
+            k.takeDamage(dmg, pt, p.vel.clone().normalize(), { weak, source: p.owner, weapon: p.weapon, stagger: p.owner === 'player' ? 0.2 : 0.05 });
             g.onDamageDealt(k, dmg, weak, pt, p.owner);
             hit = { point: pt, kaiju: k, weak };
             break;

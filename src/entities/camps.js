@@ -17,6 +17,7 @@ const CAMP_SPOTS = [
   ['Riverside Camp', -1010, 620], ['South Camp', 230, 1420], ['Crater Camp', -1180, 1830], ['Ridge Camp', 2150, -640],
 ];
 const BUNKER_SPOTS = [['Hill Bunker', 1500, 1150], ['West Bunker', -2050, 150], ['South Bunker', -950, 2250]];
+const HERD_SPOTS = [[-1650, -500], [700, 1700], [2000, -1100], [-600, -1500]]; // animals graze here
 const SEATS = 6;            // survivors the Jaeger can carry
 const RESTOCK = 110;        // seconds until a camp has new crates
 const SUIT = ['#e86a1a', '#2c8fd6', '#d94f8a', '#e0c21b', '#4fbf6a', '#b8b8c8'];
@@ -69,9 +70,14 @@ export class Camps {
     this.inv = { scrap: 1, energy: 1, food: 0 };
     this.truckCd = 0;
     this.tipT = 0;
+    this.visits = 0;      // camps you have collected from
+    this.harvested = 0;   // survivors a Harvester has taken (they cannot be saved)
+    this.animals = [];
+    this.lifts = [];      // things being beamed up into a Harvester
     const city = game.city;
     for (const [name, x, z] of CAMP_SPOTS) this.makeCamp(name, ...this.dryLand(x, z));
     for (const [name, x, z] of BUNKER_SPOTS) this.makeBunker(name, ...this.dryLand(x, z));
+    for (const [x, z] of HERD_SPOTS) this.makeHerd(...this.dryLand(x, z));
     void city;
   }
 
@@ -158,7 +164,64 @@ export class Camps {
     this.bunkers.push({ name, x, z, y, b, inside: 4 + Math.floor(Math.random() * 6), door: new THREE.Vector3(x, y, z + 17) });
   }
 
+  // a small herd of deer-like animals
+  makeHerd(x, z) {
+    const fur = new THREE.MeshStandardMaterial({ color: '#8a6a48', roughness: 1 });
+    const dark = new THREE.MeshStandardMaterial({ color: '#4a3a2a', roughness: 1 });
+    for (let i = 0; i < 5; i++) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 3.4), fur); body.position.y = 2.4; body.castShadow = true;
+      const neck = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.8, 0.9), fur); neck.position.set(0, 3.6, 1.6); neck.rotation.x = 0.4;
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 1.5), dark); head.position.set(0, 4.5, 2.3);
+      g.add(body, neck, head);
+      const legs = [];
+      for (const [lx, lz] of [[-0.5, 1.3], [0.5, 1.3], [-0.5, -1.3], [0.5, -1.3]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.8, 0.35), dark); l.position.set(lx, 0.9, lz); g.add(l); legs.push(l); }
+      g.scale.setScalar(1.6);
+      const a = Math.random() * 6.28, d = 10 + Math.random() * 40;
+      const pos = new THREE.Vector3(x + Math.cos(a) * d, 0, z + Math.sin(a) * d);
+      this.root.add(g);
+      this.animals.push({ g, legs, pos, home: new THREE.Vector3(x, 0, z), yaw: a, turnT: Math.random() * 4, walk: false });
+    }
+  }
+
   // ---------------- queries ----------------
+  // What a Harvester goes after next: the closest people or animals.
+  nearestPrey(x, z) {
+    let best = null, bd = Infinity;
+    for (const c of this.camps) {
+      if (c.crushed || !c.people.length) continue;
+      const d = Math.hypot(c.x - x, c.z - z);
+      if (d < bd) { bd = d; best = { kind: 'camp', camp: c, pos: c }; }
+    }
+    for (const a of this.animals) {
+      const d = Math.hypot(a.pos.x - x, a.pos.z - z) * 1.15; // it likes people a bit more
+      if (d < bd) { bd = d; best = { kind: 'animal', animal: a, pos: a.pos }; }
+    }
+    return best;
+  }
+
+  // A Harvester takes one survivor or animal. Returns where it was standing.
+  harvest(prey, tripod) {
+    const g = this.game;
+    let obj;
+    if (prey.kind === 'camp') {
+      const p = prey.camp.people.pop();
+      if (!p) return null;
+      obj = p.g;
+      this.harvested++;
+      g.hud.alert(`THE HARVESTER TOOK A SURVIVOR (${this.harvested})`, 2.5, true);
+      g.nav.say('harvested', 'The Harvester is taking survivors! Once it has them we cannot get them back. Destroy it!', 3, 14);
+    } else {
+      const i = this.animals.indexOf(prey.animal);
+      if (i < 0) return null;
+      this.animals.splice(i, 1);
+      obj = prey.animal.g;
+      g.nav.say('harvestAnimal', 'It is even harvesting the animals. These aliens want every living thing!', 2, 30);
+    }
+    this.lifts.push({ g: obj, tripod, t: 0, from: obj.position.clone() });
+    return obj.position.clone();
+  }
+
   nearestBunker(x, z) {
     let best = null, bd = Infinity;
     for (const k of this.bunkers) {
@@ -207,7 +270,7 @@ export class Camps {
   // The pilot walked into the crates.
   collect(c) {
     const g = this.game;
-    c.stocked = false; c.restock = RESTOCK; c.visits++;
+    c.stocked = false; c.restock = RESTOCK; c.visits++; this.visits++;
     c.crates.visible = false;
     const got = { scrap: 1 + Math.floor(Math.random() * 3), energy: 1 + Math.floor(Math.random() * 2), food: 0 };
     const lines = [`${got.scrap} scrap metal`, `${got.energy} energy`];
@@ -360,6 +423,32 @@ export class Camps {
       r.g.position.y = this.ground(r.g.position.x, r.g.position.z) + Math.abs(Math.sin(time * 14 + i)) * 0.5;
       r.g.rotation.y = Math.atan2(dx, dz);
       r.arm.rotation.z = Math.sin(time * 14 + i) * 1.2;
+    }
+
+    // animals wander around their herd
+    for (const a of this.animals) {
+      a.turnT -= dt;
+      if (a.turnT <= 0) {
+        a.turnT = 2 + Math.random() * 5;
+        a.walk = Math.random() < 0.6;
+        const home = Math.atan2(a.home.x - a.pos.x, a.home.z - a.pos.z);
+        a.yaw = Math.hypot(a.home.x - a.pos.x, a.home.z - a.pos.z) > 60 ? home : Math.random() * 6.28;
+      }
+      if (a.walk) { a.pos.x += Math.sin(a.yaw) * 4 * dt; a.pos.z += Math.cos(a.yaw) * 4 * dt; }
+      a.pos.y = this.ground(a.pos.x, a.pos.z);
+      a.g.position.copy(a.pos);
+      a.g.rotation.y = a.yaw;
+      for (let k = 0; k < 4; k++) a.legs[k].rotation.x = a.walk ? Math.sin(time * 7 + k * 1.6) * 0.5 : 0;
+    }
+    // things being beamed up into a Harvester
+    for (let i = this.lifts.length - 1; i >= 0; i--) {
+      const l = this.lifts[i];
+      l.t += dt / 1.1;
+      const to = (l.tripod.model.emitter || l.tripod.model.core).getWorldPosition(new THREE.Vector3());
+      l.g.position.lerpVectors(l.from, to, Math.min(1, l.t) ** 2);
+      l.g.rotation.y += dt * 6;
+      l.g.scale.multiplyScalar(Math.max(0, 1 - dt * 0.9));
+      if (l.t >= 1 || l.tripod.dead) { this.root.remove(l.g); this.lifts.splice(i, 1); }
     }
 
     // rescue trucks

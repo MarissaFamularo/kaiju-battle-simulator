@@ -280,13 +280,15 @@ export class Mech {
     // keep projectiles from spawning inside a building we're hugging
     const aim = g.aimPoint.clone();
     const dir = aim.sub(from).normalize();
+    const laser = a.w.id === 'laser';
+    const color = laser ? '#ff3020' : this.cfg.glow;
     g.projectiles.fire({
-      pos: from, dir, speed: a.w.speed, damage: a.w.damage * this.frame.power, owner: 'player',
-      color: this.cfg.glow, size: 12, smash: a.w.smash, radius: 6,
+      pos: from, dir, speed: a.w.speed, damage: a.w.damage * this.frame.power, owner: 'player', weapon: a.w.id,
+      color, size: laser ? 8 : 12, smash: a.w.smash, radius: laser ? 4.5 : 6,
     });
-    g.fx.glow(from, this.cfg.glow, 60, 0.12);
-    g.fx.flash(from, this.cfg.glow, 2500, 0.15);
-    audio.play('plasma', this.pos, 0.9);
+    g.fx.glow(from, color, laser ? 34 : 60, 0.12);
+    if (!laser) g.fx.flash(from, color, 2500, 0.15);
+    audio.play(laser ? 'laser' : 'plasma', this.pos, 0.9);
   }
 
   updateArm(key, dt, view, time) {
@@ -340,7 +342,7 @@ export class Mech {
     const h = THREE.MathUtils.clamp(40 * s + view.pitch * 55, 6, 80);
     const point = this.pos.clone().addScaledVector(fwd, w.reach * s).setY(this.pos.y + h);
     const dmg = w.damage * this.frame.power;
-    const res = g.hitKaiju(point, w.radius * s, dmg, fwd, { knockback: w.knockback || 8, source: 'mech', stagger: w.id === 'fist' ? 0.8 : 0.25 });
+    const res = g.hitKaiju(point, w.radius * s, dmg, fwd, { knockback: w.knockback || 8, source: 'mech', weapon: w.id, stagger: w.id === 'fist' ? 0.8 : 0.25 });
     const hb = g.city.damageArea(point, w.radius * s * 0.8, dmg * w.smash, { source: 'mech', force: w.id === 'fist' ? 2.2 : 1.3 });
     g.city.impulseDebris(point, 40, 30);
     if (res) {

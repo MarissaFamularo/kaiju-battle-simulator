@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { FRAMES, WEAPONS, HEADS, CHESTS, PALETTE, GLOWS, DEFAULT_JAEGER, rateBuild } from '../config.js';
 import { buildMech, poseBay } from '../entities/mechModel.js';
 import { audio } from '../audio.js';
+import { MISSIONS, campaignProgress } from '../campaign.js';
 
 const $ = (id) => document.getElementById(id);
 const STORE = 'kbs.jaeger.v1';
@@ -199,7 +200,18 @@ export class Hangar {
       { id: 'smash', label: 'FREE SMASH', sub: 'K kaiju, T tripod' },
       { id: 'invasion', label: 'INVASION', sub: 'tripods!' },
       { id: 'freeplay', label: 'FREE PLAY', sub: 'huge map' },
-    ], st.mode, (v) => { st.mode = v; saveSettings(st); this.refreshUI(); });
+      { id: 'campaign', label: 'CAMPAIGN', sub: `${MISSIONS.length} missions` },
+    ], st.mode, (v) => { st.mode = v; saveSettings(st); this.refreshUI(); if (v === 'campaign') this.briefMission(); });
+    // campaign: pick a mission (later ones unlock as you win)
+    const open = campaignProgress();
+    st.mission = Math.max(0, Math.min(open, st.mission ?? open));
+    $('hg-mission').style.display = st.mode === 'campaign' ? '' : 'none';
+    if (st.mode === 'campaign') {
+      this.opt('hg-mission', MISSIONS.map((m, i) => ({ id: i, label: i <= open ? `${i + 1}` : '🔒', sub: i <= open ? m.title : 'locked', title: i <= open ? m.brief : 'Win the mission before this one to unlock it.' })), st.mission, (i) => {
+        if (i > campaignProgress()) return;
+        st.mission = i; saveSettings(st); this.refreshUI(); this.briefMission();
+      });
+    }
     this.opt('hg-settings', [
       { id: 'voice', label: st.voice ? 'VOICE ON' : 'VOICE OFF' },
       { id: 'music', label: st.music ? 'MUSIC ON' : 'MUSIC OFF' },
@@ -215,6 +227,11 @@ export class Hangar {
     });
   }
 
+  briefMission() {
+    const m = MISSIONS[this.settings.mission || 0];
+    this.app.nav.say('brief', `Mission ${(this.settings.mission || 0) + 1}, ${m.title}. ${m.brief}`, 3, 0);
+  }
+
   navTip(k, v) {
     const nav = this.app.nav;
     const cfg = this.cfg;
@@ -227,6 +244,7 @@ export class Hangar {
       else if (v === 'cannon') extra = ' Aim with the mouse. Weak spots take triple damage.';
       else if (v === 'fist') extra = ' Great for knocking kaiju back.';
       else if (v === 'blades') extra = ' Super fast. Get close and keep slashing!';
+      else if (v === 'laser') extra = ' Hold the button down to keep firing!';
       nav.say('hg-weapon', `${w.name}: ${w.desc}${extra}`, 1, 0);
     } else if (k === 'primary' || k === 'accent') nav.say('hg-paint', 'Looking sharp, pilot!', 0, 6);
     else if (k === 'glow') nav.say('hg-glow', 'That energy color shows on your blades and plasma shots.', 0, 8);

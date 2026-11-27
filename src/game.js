@@ -13,6 +13,8 @@ import { Pilot } from './entities/pilot.js';
 import { Tripod, lightningStrike } from './entities/tripod.js';
 import { Aliens } from './entities/aliens.js';
 import { Camps } from './entities/camps.js';
+import { MISSIONS, unlockMission } from './campaign.js';
+import { TRIPODS } from './config.js';
 import { audio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -79,8 +81,16 @@ export class Game {
   }
 
   // ---------------------------------------------------------------- mission flow
-  startMission(cfg, mode) {
-    const kind = mode === 'freeplay' ? 'wasteland' : 'city';
+  startMission(cfg, mode, missionIdx = 0) {
+    const kind = mode === 'freeplay' || mode === 'campaign' ? 'wasteland' : 'city';
+    // campaign: which mission, and its scratch state
+    this.missionIdx = Math.max(0, Math.min(MISSIONS.length - 1, missionIdx || 0));
+    this.mission = mode === 'campaign' ? MISSIONS[this.missionIdx] : null;
+    this.ms = { t: 0, started: false, s: {}, gaveLaser: false };
+    if (this.mission && this.mission.needsSpecial && !['sword', 'laser'].includes(cfg.left) && !['sword', 'laser'].includes(cfg.right)) {
+      cfg.right = 'laser'; // nothing else can hurt an Uber Pod
+      this.ms.gaveLaser = true;
+    }
     if (this.dirty || kind !== this.worldKind) this.buildWorld(kind);
     this.dirty = true;
     this.fp = { t: 16, count: 0, craterCd: 0 }; // free play spawn timers
@@ -101,7 +111,7 @@ export class Game {
     this.carrier = this.drones.spawnCarrier(cfg.glow, new THREE.Vector3(LAND.x, 1600, LAND.z + 600));
     this.landing = { t: 0, released: false, landed: false, vy: 0 };
     this.state = 'landing';
-    this.hud.freePlay = mode === 'freeplay';
+    this.hud.freePlay = mode === 'freeplay' || mode === 'campaign';
     this.hud.setup(cfg);
     this.over = false;
     this.lastLowArmor = 0;
@@ -123,6 +133,7 @@ export class Game {
   waveLabel() {
     if (this.mode === 'smash') return 'FREE SMASH';
     if (this.mode === 'freeplay') return 'FREE PLAY';
+    if (this.mode === 'campaign') return this.ms.started ? `M${this.missionIdx + 1} · ${this.mission.goal(this, this.ms.s)}` : `MISSION ${this.missionIdx + 1}: ${this.mission.title.toUpperCase()}`;
     if (this.waveIdx < 0) return 'GET READY';
     if (this.mode === 'endless') return `WAVE ${this.waveIdx + 1}`;
     if (this.mode === 'invasion') return `INVASION WAVE ${this.waveIdx + 1}`;
@@ -233,7 +244,8 @@ export class Game {
       const farFromPlant = this.city.noPlant || Math.hypot(x - this.city.plantCenter.x, z - this.city.plantCenter.z) > 230;
       if (farFromMe && farFromPlant) break;
     }
-    this.warnings.push({ tripod: true, type, t: 8.5, strikeT: 0.2, strikes: 0, x, z, zone: new THREE.Vector3(x, 0, z), radius: 90 });
+    // the Uber Pod gets the full 20 lightning strikes
+    this.warnings.push({ tripod: true, type, t: type === 'uber' ? 13 : 8.5, quick: type === 'uber', strikeT: 0.2, strikes: 0, x, z, zone: new THREE.Vector3(x, 0, z), radius: 90 });
     audio.play('alarm');
     this.hud.alert('LIGHTNING STORM AHEAD', 5, true);
     this.nav.say('tripodWarn', 'Lightning keeps hitting the same spot ahead of you! Something is coming up out of the ground. Hide behind a building so its scanner light cannot find you!', 3, 0);
@@ -243,8 +255,11 @@ export class Game {
     lightningStrike(this, w.x, w.z, true);
     const t = new Tripod(this, { type: w.type, x: w.x, z: w.z });
     this.kaijus.push(t);
-    this.hud.alert('TRIPOD RISING', 4, true);
-    this.nav.say('tripodRise', `A tripod! Legs first, then it pushes itself up. That is ${t.name}. It can only attack if its scanner light finds you. Its weak spot is the glowing core underneath.`, 3, 0);
+    this.hud.alert(`${TRIPODS[w.type].name.toUpperCase()} RISING`, 4, true);
+    if (w.type === 'harvester') this.nav.say('harvRise', `That is a Harvester! It is going after the survivor camps and the animals. Catch it before it gets there, and watch out for its legs: it stomps!`, 3, 0);
+    else if (w.type === 'uber') this.nav.say('uberRise', `An Uber Pod! Look at the size of it. Stacked lasers and long legs. Remember: only your Energy Sword or Laser Blaster can hurt it!`, 3, 0);
+    else this.nav.say('tripodRise', `A tripod! Legs first, then it pushes itself up. That is ${t.name}. It can only attack if its scanner light finds you. Its weak spot is the glowing core underneath.`, 3, 0);
+    return t;
   }
 
   onTripodKilled(t) {
@@ -497,7 +512,7 @@ export class Game {
         w.strikeT -= dt;
         if (w.strikeT <= 0 && w.t > 0.4) {
           w.strikes++;
-          w.strikeT = 0.3 + Math.random() * 0.5 + w.t * 0.08;
+          w.strikeT = w.quick ? 0.3 + Math.random() * 0.35 + w.t * 0.03 : 0.3 + Math.random() * 0.5 + w.t * 0.08;
           lightningStrike(this, w.x + (Math.random() - 0.5) * 50, w.z + (Math.random() - 0.5) * 50);
         }
         if (w.t <= 0) { this.warnings.splice(i, 1); this.spawnTripod(w); }
@@ -508,6 +523,7 @@ export class Game {
     }
     if (this.mode === 'smash') return;
     if (this.mode === 'freeplay') { this.updateFreePlay(dt); return; }
+    if (this.mode === 'campaign') { this.updateCampaign(dt); return; }
     for (let i = this.spawnQueue.length - 1; i >= 0; i--) {
       const s = this.spawnQueue[i];
       s.delay -= dt;
@@ -538,18 +554,46 @@ export class Game {
   // Free play: kaiju and tripods keep turning up around the huge map.
   updateFreePlay(dt) {
     const fp = this.fp;
-    fp.t -= dt; fp.craterCd -= dt;
+    fp.t -= dt;
     const busy = this.kaijus.filter((k) => !k.dead).length + this.warnings.length;
     if (fp.t <= 0) {
       if (busy < 3) {
         fp.count++;
         fp.t = 40 + Math.random() * 30;
-        if (Math.random() < 0.5) this.queueTripod();
+        if (Math.random() < 0.5) this.queueTripod(fp.count > 6 && Math.random() < 0.25 ? 'uber' : 'attacker'); // an Uber Pod now and then, later on
         else this.queueKaiju(Math.min(5, 1 + Math.floor(fp.count / 3) + (Math.random() < 0.3 ? 1 : 0)));
         audio.intensity = Math.min(1, 0.4 + fp.count * 0.04);
       } else fp.t = 10;
     }
-    // the crater: get too close to the wrecked tripod head and monsters come out
+    this.checkCrater(dt);
+  }
+
+  // Campaign: run the current mission and watch for a win or a loss.
+  updateCampaign(dt) {
+    const ms = this.ms, M = this.mission;
+    ms.t += dt;
+    if (!ms.started) {
+      if (ms.t < 5) return;
+      ms.started = true;
+      this.hud.alert(`MISSION ${this.missionIdx + 1}: ${M.title.toUpperCase()}`, 4);
+      if (ms.gaveLaser) this.nav.say('gaveLaser', 'You had no Energy Sword or Laser Blaster, so I bolted a Laser Blaster onto your right arm for this mission.', 3, 0);
+      M.start(this, ms.s);
+      return;
+    }
+    if (M.tick) M.tick(this, ms.s, dt);
+    if (ms.t < 10 || this.over) return;
+    const why = M.failed(this, ms.s);
+    if (why) { this.nav.say('mFail', why, 3, 0); this.defeat('MISSION FAILED', why); return; }
+    if (M.done(this, ms.s)) {
+      unlockMission(this.missionIdx + 1);
+      this.victory();
+    }
+  }
+
+  // The crater: get too close to the wrecked tripod head and monsters come out.
+  checkCrater(dt) {
+    const fp = this.fp;
+    fp.craterCd -= dt;
     const c = this.city.places.crater;
     const ref = this.pilot && !this.pilot.dead ? this.pilot.pos : this.mech.pos;
     if (fp.craterCd <= 0 && Math.hypot(ref.x - c.x, ref.z - c.z) < 330) {
@@ -563,7 +607,7 @@ export class Game {
 
   // A win patches up a little armor. Real repairs come from scrap and energy found at survivor camps (R).
   fieldRepair() {
-    if (this.mode !== 'freeplay' || !this.mech || this.mech.dead) return;
+    if (!this.camps || !this.mech || this.mech.dead) return;
     this.mech.hp = Math.min(this.mech.maxHp, this.mech.hp + this.mech.maxHp * 0.1);
   }
 
@@ -830,7 +874,7 @@ export class Game {
     if (this.over) return;
     this.over = true;
     this.state = 'over';
-    this.nav.say('victory', `Mission complete! ${this.cfg.name} saved the city! You are a real Jaeger pilot!`, 3, 0);
+    this.nav.say('victory', this.mission ? this.mission.win : `Mission complete! ${this.cfg.name} saved the city! You are a real Jaeger pilot!`, 3, 0);
     audio.play('uiBig');
     setTimeout(() => { if (this.state === 'over') this.app.showEnd(true, this.summary()); }, 3500);
   }
@@ -858,6 +902,7 @@ export class Game {
       kills: this.stats.kills,
       tripods: this.stats.tripods,
       saved: this.camps ? this.camps.saved : null,
+      campaign: this.mission ? { n: this.missionIdx + 1, title: this.mission.title, last: this.missionIdx >= MISSIONS.length - 1 } : null,
       weak: this.stats.weakHits,
       buildings: this.city.destroyed,
       damage: Math.round(this.stats.damage),

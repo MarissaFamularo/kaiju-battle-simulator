@@ -20,6 +20,8 @@ const UP = new THREE.Vector3(0, 1, 0);
 const BOLT = new THREE.Color('#cfe4ff');
 const WHITE = new THREE.Color('#bfefff');
 const RED = new THREE.Color('#ff2a1a');
+const GREEN = new THREE.Color('#7dffb0');
+const HEAT_GEO = new THREE.SphereGeometry(2.4, 10, 8);
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3();
 const _q = new THREE.Quaternion();
@@ -52,7 +54,8 @@ export function lightningStrike(game, x, z, big = false) {
   game.shake(big ? 1.2 : 0.45, end);
 }
 
-function buildTripod() {
+function buildTripod(spec) {
+  const S = spec.size;
   const mats = {
     hull: new THREE.MeshStandardMaterial({ color: '#8b93a6', metalness: 0.6, roughness: 0.38, emissive: '#1a2030', emissiveIntensity: 0.6 }),
     trim: new THREE.MeshStandardMaterial({ color: '#c3c9d6', metalness: 0.65, roughness: 0.3, emissive: '#1a2030', emissiveIntensity: 0.5 }),
@@ -60,6 +63,7 @@ function buildTripod() {
     strip: new THREE.MeshStandardMaterial({ color: '#000', emissive: '#7dffb0', emissiveIntensity: 2.2 }),
     lights: new THREE.MeshStandardMaterial({ color: '#000', emissive: WHITE.clone(), emissiveIntensity: 0 }),
     weak: new THREE.MeshStandardMaterial({ color: '#000', emissive: '#38d8ff', emissiveIntensity: 3 }),
+    heat: new THREE.MeshBasicMaterial({ color: '#ff3a1a', transparent: true, opacity: 0.9, depthWrite: false }),
     beam: new THREE.MeshBasicMaterial({ color: WHITE.clone(), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
     spot: new THREE.MeshBasicMaterial({ color: WHITE.clone(), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }),
   };
@@ -102,6 +106,31 @@ function buildTripod() {
   const gun = M(new THREE.CylinderGeometry(0.9, 1.2, 5, 10), mats.dark, 0, -3.4, 4, head);
   gun.rotation.x = Math.PI / 2;
   const muzzle = new THREE.Object3D(); muzzle.position.set(0, -3.4, 7); head.add(muzzle);
+  let muzzleBig = null, emitter = null;
+  if (spec.immune) {
+    // Uber Pod: a taller head with weapons stacked on top
+    const top = M(new THREE.SphereGeometry(5, 16, 12), mats.trim, 0, 5.5, 0, head); top.scale.set(1.2, 0.7, 1);
+    const top2 = M(new THREE.SphereGeometry(3.4, 14, 10), mats.hull, 0, 9.5, -0.5, head); top2.scale.set(1.1, 0.8, 1);
+    for (const s of [-1, 1]) { // laser mini guns
+      for (const o of [-0.7, 0.7]) { const b = M(new THREE.CylinderGeometry(0.35, 0.35, 7, 6), mats.dark, s * 6.2 + o, 5.2, 5, head); b.rotation.x = Math.PI / 2; }
+      M(new THREE.BoxGeometry(2.6, 2.2, 3.6), mats.dark, s * 6.2, 5.2, 1.6, head);
+    }
+    const big = M(new THREE.CylinderGeometry(1.5, 1.9, 9, 12), mats.dark, 0, 9.5, 5, head); big.rotation.x = Math.PI / 2; // big laser
+    M(new THREE.CylinderGeometry(1.2, 1.2, 0.8, 12), mats.strip, 0, 9.5, 9.6, head).rotation.x = Math.PI / 2;
+    muzzleBig = new THREE.Object3D(); muzzleBig.position.set(0, 9.5, 10.5); head.add(muzzleBig);
+    muzzle.position.set(6.2, 5.2, 9);
+  }
+  if (spec.harvest) {
+    // Harvester: a cage on its back and a beam emitter underneath, no guns
+    gun.visible = false;
+    const cage = new THREE.Group(); cage.position.set(0, 2, -14); body.add(cage);
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; M(new THREE.CylinderGeometry(0.3, 0.3, 11, 5), mats.dark, Math.cos(a) * 5.5, 0, Math.sin(a) * 5.5, cage); }
+    for (const y of [-5.5, 5.5]) { const ring = M(new THREE.TorusGeometry(5.5, 0.45, 6, 18), mats.trim, 0, y, 0, cage); ring.rotation.x = Math.PI / 2; }
+    M(new THREE.SphereGeometry(2.2, 12, 8), mats.strip, 0, 0, 0, cage).castShadow = false;
+    emitter = new THREE.Object3D(); emitter.position.set(0, -8, 4); body.add(emitter);
+    M(new THREE.ConeGeometry(3.2, 4, 12, 1, true), mats.strip, 0, -9.5, 4, body).castShadow = false;
+  }
+  body.scale.setScalar(spec.hull);
   const eye = new THREE.Object3D(); eye.position.set(0, 0, 7.5); head.add(eye);
   // the scanner light cone
   const BEAM_LEN = 270;
@@ -110,6 +139,7 @@ function buildTripod() {
   const beam = new THREE.Mesh(coneGeo, mats.beam);
   beam.position.copy(eye.position);
   beam.rotation.x = -(Math.PI / 2 - BEAM_PITCH);
+  { const len = spec.range / 300 / spec.hull, wide = len * Math.tan(spec.cone) / Math.tan(0.2); beam.scale.set(wide, len, wide); }
   beam.renderOrder = 9;
   head.add(beam);
   // pool of light where the beam lands
@@ -120,8 +150,8 @@ function buildTripod() {
 
   // ---- three legs (posed every frame in world space) ----
   const legs = [];
-  const thighGeo = new THREE.CylinderGeometry(1.7, 1.4, L1, 10);
-  const shinGeo = new THREE.CylinderGeometry(1.3, 0.8, L2, 10);
+  const thighGeo = new THREE.CylinderGeometry(1.7 * S, 1.4 * S, L1 * S, 10);
+  const shinGeo = new THREE.CylinderGeometry(1.3 * S, 0.8 * S, L2 * S, 10);
   for (let i = 0; i < 3; i++) {
     const thigh = M(thighGeo, mats.hull, 0, 0, 0, root);
     const shin = M(shinGeo, mats.trim, 0, 0, 0, root);
@@ -135,7 +165,7 @@ function buildTripod() {
     }
     legs.push({ thigh, shin, knee, foot });
   }
-  return { root, body, head, hull, core, muzzle, eye, beam, spot, legs, mats };
+  return { root, body, head, hull, core, muzzle, muzzleBig, emitter, eye, beam, spot, legs, mats };
 }
 
 // Lays a cylinder mesh between two world points.
@@ -152,11 +182,13 @@ export class Tripod {
     this.type = type;
     this.spec = TRIPODS[type];
     this.cat = 2; // radar dot size
-    this.name = `Tripod ${NAMES[nameIdx++ % NAMES.length]}`;
+    this.name = `${this.spec.short} ${NAMES[nameIdx++ % NAMES.length]}`;
+    const S = this.spec.size;
+    this.stand = STAND * S; this.l1 = L1 * S; this.l2 = L2 * S; this.footR = FOOT_R * S; // bigger types stand taller
     this.maxHp = this.hp = this.spec.hp;
     this.speed = this.spec.speed;
-    this.radius = 12;
-    this.height = 60;
+    this.radius = 12 * S;
+    this.height = 60 * S;
     this.scale = 1;
     this.pos = new THREE.Vector3(x, game.city.groundAt(x, z), z); // pos.y is always the land height
     this.vel = new THREE.Vector3();
@@ -172,7 +204,9 @@ export class Tripod {
     this.removeMe = false;
     this.revealed = true;   // its weak spot (the core underneath) is always marked
     this.seenT = 0;
-    this.model = buildTripod();
+    this.model = buildTripod(this.spec);
+    this.marks = [];       // red hot marks left by weapons that cannot hurt it
+    this.bigCd = 3; this.stompCd = 2; this.harvestT = 0;
     this.root = this.model.root;
     game.scene.add(this.root);
     this.feet = LEG_ANGLES.map(() => ({ pos: new THREE.Vector3(x, this.pos.y + BURIED, z), from: new THREE.Vector3(), to: new THREE.Vector3(), t: -1, planted: false }));
@@ -190,7 +224,7 @@ export class Tripod {
     this.hitFlash = 0;
     this.deadT = 0;
     this.hitCache = [
-      { p: new THREE.Vector3(), r: 13, weak: false },  // hull
+      { p: new THREE.Vector3(), r: 13 * this.spec.hull, weak: false },  // hull
       { p: new THREE.Vector3(), r: 5.5, weak: true, name: 'CORE' },  // power core underneath
       { p: new THREE.Vector3(), r: 7, weak: false },   // scanner head
       { p: new THREE.Vector3(), r: 4, weak: false }, { p: new THREE.Vector3(), r: 4, weak: false }, { p: new THREE.Vector3(), r: 4, weak: false }, // knees
@@ -211,7 +245,7 @@ export class Tripod {
 
   restFoot(i, out) {
     const a = this.yaw + LEG_ANGLES[i];
-    out.set(this.pos.x + Math.sin(a) * FOOT_R, 0, this.pos.z + Math.cos(a) * FOOT_R);
+    out.set(this.pos.x + Math.sin(a) * this.footR, 0, this.pos.z + Math.cos(a) * this.footR);
     out.y = this.game.city.groundAt(out.x, out.z);
     return out;
   }
@@ -222,12 +256,13 @@ export class Tripod {
   update(dt) {
     const g = this.game;
     this.stateT += dt;
-    this.fireCd -= dt; this.capsuleCd -= dt; this.stepCd -= dt;
+    this.fireCd -= dt; this.capsuleCd -= dt; this.stepCd -= dt; this.bigCd -= dt; this.stompCd -= dt;
     this.hitFlash = Math.max(0, this.hitFlash - dt * 4);
     switch (this.state) {
       case 'emerge': this.updateEmerge(dt); break;
       case 'boot': this.updateBoot(dt); break;
       case 'search': this.updateSearch(dt); break;
+      case 'harvest': this.updateHarvest(dt); break;
       case 'alarm': this.updateAlarm(dt); break;
       case 'attack': this.updateAttack(dt); break;
       case 'dead': this.updateDead(dt); break;
@@ -275,7 +310,7 @@ export class Tripod {
         audio.play('explosion', p, 0.8);
         g.shake(1, this.pos);
       }
-      this.bodyY = BURIED + 0.01 + (STAND - BURIED) * e;
+      this.bodyY = BURIED + 0.01 + (this.stand - BURIED) * e;
       if (Math.random() < 0.5) g.fx.dust(_b.set(this.pos.x + (Math.random() - 0.5) * 30, this.pos.y + 2, this.pos.z + (Math.random() - 0.5) * 30), 0.8, 2);
       if (k >= 1) { this.emerging = false; this.setState('boot'); }
     }
@@ -284,7 +319,7 @@ export class Tripod {
   updateBoot(dt) {
     // lights flicker on
     this.lit = this.stateT > 1 ? 1 : (Math.sin(this.stateT * 40) > 0 ? 1 : 0.1);
-    if (this.stateT > 1.2) { this.lit = 1; this.setState('search'); }
+    if (this.stateT > 1.2) { this.lit = 1; this.setState(this.spec.harvest ? 'harvest' : 'search'); }
   }
 
   // Is this point inside the scanner light, with nothing in the way?
@@ -369,7 +404,7 @@ export class Tripod {
     this.vel.multiplyScalar(Math.max(0, 1 - dt * 4));
     this.pos.addScaledVector(this.vel, dt);
     this.faceTarget(dt);
-    if (this.stateT > 1.6) {
+    if (this.stateT > (this.spec.immune ? 0.5 : 1.6)) { // the Uber Pod comes for you at once
       if (this.capsuleCd <= 0 && this.game.mech && !this.game.mech.dead && this.game.aliens) {
         this.capsuleCd = 45;
         this.game.aliens.launchCapsule(this.headPos().setY(this.pos.y + this.bodyY + 6), this.game.mech);
@@ -416,7 +451,7 @@ export class Tripod {
     this.losT -= dt;
     if (this.losT <= 0) { this.losT = 0.25; this.los = T.kind === 'kaiju' ? true : this.canSee(tp); }
     if (this.los) this.lostT = 0; else this.lostT += dt;
-    if (this.lostT > 6) {
+    if (this.lostT > (this.spec.lose || 6)) {
       this.target = null;
       this.setState('search');
       g.hud.alert('THE TRIPOD LOST YOU', 2.5);
@@ -425,18 +460,99 @@ export class Tripod {
     }
     // keep a firing distance
     const dist = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z);
-    const want = T.kind === 'kaiju' ? 170 : 210;
+    const want = this.spec.immune ? 150 : T.kind === 'kaiju' ? 170 : 210;
     if (dist > want + 50 || !this.los) this.moveToward(tp, this.speed * 1.15, dt, 0, true);
     else if (dist < want - 80) this.moveToward(_a.copy(this.pos).multiplyScalar(2).sub(tp), this.speed * 0.8, dt, 0, true);
     else { this.vel.multiplyScalar(Math.max(0, 1 - dt * 3)); this.pos.addScaledVector(this.vel, dt); }
     // laser bursts
     if (this.burst > 0) {
       this.burstT -= dt;
-      if (this.burstT <= 0) { this.burstT = 0.16; this.burst--; this.fireLaser(tp, T); }
+      if (this.burstT <= 0) { this.burstT = this.spec.minigun ? 0.07 : 0.16; this.burst--; this.fireLaser(tp, T); }
+    } else if (this.spec.big && this.bigCd <= 0 && this.los && Math.abs(dy) < 0.4 && dist < 560) {
+      this.bigCd = this.spec.bigEvery;
+      this.fireBig(tp, T);
     } else if (this.fireCd <= 0 && this.los && Math.abs(dy) < 0.5 && dist < 520) {
-      this.burst = 3; this.burstT = 0;
+      this.burst = this.spec.minigun || 3; this.burstT = 0;
       this.fireCd = this.spec.fireEvery + Math.random() * 0.6;
     }
+  }
+
+  // The Uber Pod's big laser: one slow, heavy bolt.
+  fireBig(tp, T) {
+    const g = this.game;
+    const from = this.model.muzzleBig.getWorldPosition(new THREE.Vector3());
+    const aim = tp.clone();
+    if (T.ent.vel) aim.addScaledVector(T.ent.vel, from.distanceTo(tp) / 380);
+    g.projectiles.fire({
+      pos: from, dir: aim.sub(from).normalize(), speed: 380, damage: this.spec.big * (T.kind === 'kaiju' ? 3 : 1),
+      owner: T.kind === 'kaiju' ? 'tripod' : 'kaiju', src: this, color: '#ff6a2a', size: 30, radius: 8, smash: 2.5, life: 4,
+    });
+    g.fx.glow(from, RED, 90, 0.2);
+    g.fx.flash(from, '#ff5a2a', 5000, 0.25);
+    audio.play('plasma', this.pos, 1.2);
+    g.shake(0.3, this.pos);
+  }
+
+  // ---- Harvester: collect survivors and animals; stomp anything that gets in the way ----
+  updateHarvest(dt) {
+    const g = this.game;
+    this.headYaw = Math.sin(g.time * 0.5) * 0.6;
+    this.alert = Math.min(0.5, this.alert + dt); // amber lights
+    const m = g.mech;
+    // a pilot on foot can be captured: only the Jaeger is safe
+    if (g.pilot && !g.pilot.dead && g.state === 'play') {
+      const d = Math.hypot(g.pilot.pos.x - this.pos.x, g.pilot.pos.z - this.pos.z);
+      if (d < 120) g.nav.say('harvestPilot', 'Get back in your Jaeger! The Harvester can grab you on foot. You are only safe inside!', 3, 12);
+      if (d < 42) { this.beamUp(g.pilot.pos); g.defeat('PILOT CAPTURED', 'The Harvester grabbed you on foot. Stay inside your Jaeger near a Harvester!'); return; }
+    }
+    // the Jaeger is in the way: step on it
+    const md = m && !m.dead ? Math.hypot(m.pos.x - this.pos.x, m.pos.z - this.pos.z) : Infinity;
+    if (md < 105) {
+      this.moveToward(m.pos, this.speed * 0.9, dt, this.footR * 0.75);
+      if (md < this.footR * 1.5 && this.stompCd <= 0 && !this.feet.some((f) => f.t >= 0)) this.startStomp(m.pos);
+      return;
+    }
+    const prey = g.camps ? g.camps.nearestPrey(this.pos.x, this.pos.z) : null;
+    if (!prey) { this.vel.multiplyScalar(Math.max(0, 1 - dt * 3)); this.pos.addScaledVector(this.vel, dt); return; }
+    const d = this.moveToward(prey.pos, this.speed, dt, 34);
+    if (d < 48) {
+      this.harvestT += dt;
+      if (this.harvestT > 1.3) { this.harvestT = 0; this.beamUp(g.camps.harvest(prey, this)); }
+    }
+  }
+
+  // green beam from the emitter down to whatever is being taken
+  beamUp(at) {
+    if (!at) return;
+    const g = this.game;
+    const from = (this.model.emitter || this.model.core).getWorldPosition(new THREE.Vector3());
+    for (let i = 0; i <= 14; i++) g.fx.glow(_a.copy(from).lerp(at, i / 14), GREEN, 16, 0.5);
+    g.fx.ring(at, 2, 16, 0.5, '#7dffb0', 0.6);
+    audio.play('uiBig', this.pos, 0.8);
+  }
+
+  // lift the nearest leg high and bring it down on the target
+  startStomp(target) {
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < 3; i++) { const d = Math.hypot(this.feet[i].pos.x - target.x, this.feet[i].pos.z - target.z); if (d < bd) { bd = d; best = i; } }
+    const f = this.feet[best];
+    f.from.copy(f.pos);
+    // only as far as the leg can reach
+    const dx = target.x - this.pos.x, dz = target.z - this.pos.z, d = Math.hypot(dx, dz) || 1, reach = Math.min(d, this.footR * 1.45);
+    f.to.set(this.pos.x + dx / d * reach, 0, this.pos.z + dz / d * reach);
+    f.to.y = this.game.city.groundAt(f.to.x, f.to.z);
+    f.t = 0; f.stomp = true;
+    this.stompCd = 2.8;
+    this.game.nav.say('stompWarn', 'It is lifting a leg to stomp you! Move!', 2, 9);
+  }
+
+  stompHit(p) {
+    const g = this.game, m = g.mech;
+    g.fx.groundDust(p, 70, 36);
+    g.fx.ring(_c.copy(p).setY(p.y + 1), 4, 70, 0.6, '#ffe0b0', 0.6);
+    audio.play('explosion', p, 0.9);
+    g.shake(1.4, p);
+    if (m && !m.dead && Math.hypot(m.pos.x - p.x, m.pos.z - p.z) < 21 + m.radius && m.pos.y < p.y + 30) m.takeDamage(this.spec.stomp, p);
   }
 
   fireLaser(tp, T) {
@@ -480,7 +596,7 @@ export class Tripod {
     g.fx.dust(_c.copy(p).setY(p.y + 2), 0.6 * power, 4);
     g.shake(0.2 * power, p);
     g.city.crushCars(p.x, p.z, 9);
-    if (g.camps) g.camps.stomp(p); // tripods flatten survivor camps
+    if (g.camps && !this.spec.harvest) g.camps.stomp(p); // tripods flatten survivor camps (a Harvester wants them whole)
     g.city.damageArea(_c.copy(p).setY(p.y + 4), 8, 260 * power, { source: 'tripod', force: 1.1 });
   }
 
@@ -490,12 +606,16 @@ export class Tripod {
     for (let i = 0; i < 3; i++) {
       const f = this.feet[i];
       if (f.t >= 0) {
-        f.t += dt / 0.36;
+        f.t += dt / (f.stomp ? 0.85 : 0.36);
         const k = Math.min(1, f.t);
-        const e = k * k * (3 - 2 * k);
+        // a stomp hangs in the air, then slams down
+        const e = f.stomp ? Math.min(1, k * 1.6) ** 2 * (3 - 2 * Math.min(1, k * 1.6)) : k * k * (3 - 2 * k);
         f.pos.lerpVectors(f.from, f.to, e);
-        f.pos.y += Math.sin(k * Math.PI) * 13;
-        if (k >= 1) { f.t = -1; f.pos.copy(f.to); this.footfall(f.pos); this.stepCd = 0.05; }
+        f.pos.y += f.stomp ? (k < 0.7 ? Math.sin(k / 0.7 * Math.PI / 2) : 1 - ((k - 0.7) / 0.3) ** 2) * 36 : Math.sin(k * Math.PI) * 13;
+        if (k >= 1) {
+          f.t = -1; f.pos.copy(f.to); this.footfall(f.pos, f.stomp ? 1.5 : 1); this.stepCd = 0.05;
+          if (f.stomp) { f.stomp = false; this.stompHit(f.pos); this.stepCd = 0.5; }
+        }
         continue;
       }
       const rest = this.restFoot(i, _a).addScaledVector(this.vel, 0.4);
@@ -527,6 +647,7 @@ export class Tripod {
       m.body.localToWorld(hip);
       const to = _b.copy(f.pos).sub(hip);
       const full = to.length();
+      const L1 = this.l1, L2 = this.l2;
       const d = THREE.MathUtils.clamp(full, 6, L1 + L2 - 0.5);
       to.divideScalar(full || 1);
       const along = (L1 * L1 - L2 * L2 + d * d) / (2 * d);
@@ -566,17 +687,39 @@ export class Tripod {
     m.spot.position.set(far.x, g.city.groundAt(far.x, far.z) + 0.7, far.z);
     m.spot.scale.setScalar(Math.max(8, Math.tan(this.spec.cone) * reach * 1.15));
     m.mats.spot.opacity = lit * (wall ? 0.05 : 0.2);
-    void dt;
+    // red hot marks cool down and fade
+    for (let i = this.marks.length - 1; i >= 0; i--) {
+      const k = this.marks[i];
+      k.t += dt;
+      k.mesh.material.opacity = Math.max(0, 0.9 * (1 - k.t / 2.6));
+      k.mesh.scale.setScalar(1 + k.t * 0.25);
+      if (k.t > 2.6) { g.fx.steam(k.mesh.getWorldPosition(_a), 0.4); m.body.remove(k.mesh); k.mesh.material.dispose(); this.marks.splice(i, 1); }
+    }
+  }
+
+  // A hit from a weapon that cannot hurt it: it just leaves a red mark that the tripod cools down.
+  heatMark(point) {
+    if (!point || this.marks.length > 10) return;
+    const mesh = new THREE.Mesh(HEAT_GEO, this.model.mats.heat.clone());
+    mesh.position.copy(this.model.body.worldToLocal(point.clone()));
+    this.model.body.add(mesh);
+    this.marks.push({ mesh, t: 0 });
   }
 
   // ------------------------------------------------------------ damage
   takeDamage(amount, point, dir, opts = {}) {
     if (this.dead || this.emerging) return;
     const g = this.game;
+    if (this.spec.immune && opts.weapon !== 'sword' && opts.weapon !== 'laser') {
+      // only the Energy Sword and Laser Blaster get through
+      amount = 0;
+      this.heatMark(point);
+      if (opts.source === 'mech' || opts.source === 'player') g.nav.say('uberImmune', 'That only left a red hot mark, and it is already cooling down! Only an Energy Sword or a Laser Blaster can hurt an Uber Pod.', 3, 20);
+    }
     this.hp -= amount;
     this.hitFlash = 1;
-    if (point) g.fx.sparks(point, opts.weak ? 30 : 12, opts.weak ? 'blue' : 'spark');
-    if (opts.knockback && dir) this.knock.addScaledVector(dir, opts.knockback * 0.3);
+    if (point && amount > 0) g.fx.sparks(point, opts.weak ? 30 : 12, opts.weak ? 'blue' : 'spark');
+    if (opts.knockback && dir && amount > 0) this.knock.addScaledVector(dir, opts.knockback * 0.3);
     if (this.hp <= 0) { this.die(); return; }
     // shooting it gives you away
     const src = opts.source;

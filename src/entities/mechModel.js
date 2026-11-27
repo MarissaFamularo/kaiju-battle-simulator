@@ -165,7 +165,18 @@ export function buildMech(cfg) {
     const hand = new THREE.Group(); hand.position.y = -13;
     el.add(hand);
     weapons[key] = wid;
-    if (wid === 'cannon') {
+    if (wid === 'laser') {
+      // Laser Blaster: twin barrels with glowing red tips
+      const red = mats.laser || (mats.laser = new THREE.MeshStandardMaterial({ color: '#000', emissive: '#ff3020', emissiveIntensity: 3 }));
+      hand.add(M(rbox(6, 3, 6.4, 1), mats.accent, 0, -1.5, 0));
+      for (const s of [-1, 1]) {
+        hand.add(M(new THREE.CylinderGeometry(1.1, 1.3, 9, 10), mats.dark, s * 1.6, -6.5, 0));
+        hand.add(M(new THREE.CylinderGeometry(0.75, 0.75, 0.8, 10), red, s * 1.6, -11.2, 0));
+      }
+      hand.add(M(rbox(1, 6, 1.4, 0.3), red, 0, -6, 3));
+      const mz = new THREE.Object3D(); mz.position.y = -11.5; hand.add(mz);
+      muzzle[key] = mz;
+    } else if (wid === 'cannon') {
       const barrel = M(new THREE.CylinderGeometry(2.4, 3, 9, 16), mats.dark, 0, -3.5, 0);
       hand.add(barrel);
       hand.add(M(new THREE.CylinderGeometry(3.2, 3.2, 2, 16), mats.accent, 0, -1, 0));

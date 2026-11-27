@@ -37,6 +37,7 @@ A game by Patrick. Build your own Jaeger, drop from a space station into a big 3
 - **Wrist Blades:** twin knives, very fast.
 - **Plasma Cannon:** hand folds into a cannon, hits weak spots from far away.
 - **Power Fist:** rocket punch, knocks kaiju back and flattens buildings.
+- **Laser Blaster:** fast red laser bolts; one of the two weapons that can hurt an Uber Pod.
 
 ### Cockpits and chest pieces
 
@@ -68,7 +69,12 @@ Patrick's full design is in `docs/chapter-2-design.md`. Built so far:
 - **Saving survivors.** Stand your Jaeger next to a camp and up to 6 survivors climb aboard; carry them to a bunker (blue B on the radar). Or press **4** near a camp to call a rescue truck from the nearest bunker.
 - **Bunkers** are underground. Tripod feet cannot hurt them, but kaiju attack the hatch, so protect them.
 
-Still to come: the Harvester and Uber Pod, the campaign, and the new space intro.
+- **Laser Blaster:** a new arm weapon. Twin barrels, fast red bolts; hold the button to keep firing.
+- **Harvester** (campaign only). It walks to the survivor camps and the animal herds and beams them up into the cage on its back. Captured survivors cannot be saved. It has no guns: it fights by lifting a leg and stomping you. It can grab the pilot on foot, so stay in your Jaeger.
+- **Uber Pod.** Taller, with longer legs and weapons stacked on its head: laser mini guns and a big laser. Its scanner sees farther and wider and it comes straight for you. Ordinary weapons only leave a red hot mark that cools down. Only the **Energy Sword** and **Laser Blaster** hurt it. It arrives with about 20 lightning strikes.
+- **CAMPAIGN:** seven missions on the huge map, unlocked one at a time and saved in the browser: First Contact, Supply Run, Rescue, The Harvester, Hold the Bunker, Monsters of the Crater, The Uber Pod. The mission list is in `src/campaign.js`.
+
+Still to come: the new space intro.
 
 ### Modes
 

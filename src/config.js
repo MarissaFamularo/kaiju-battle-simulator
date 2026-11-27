@@ -41,6 +41,11 @@ export const WEAPONS = {
     desc: 'The hand folds into a cannon. Hit weak spots from far away.',
     damage: 38, cooldown: 0.75, speed: 420, smash: 1.0,
   },
+  laser: {
+    id: 'laser', name: 'Laser Blaster', kind: 'ranged',
+    desc: 'Twin barrels that fire fast red laser bolts. One of the only weapons that can hurt an Uber Pod.',
+    damage: 17, cooldown: 0.2, speed: 720, smash: 0.6,
+  },
   fist: {
     id: 'fist', name: 'Power Fist', kind: 'melee',
     desc: 'Rocket-powered punch. Knocks kaiju back and flattens buildings.',
@@ -114,10 +119,24 @@ export const BACKUP = {
 // Chapter 2 tripods (docs/chapter-2-design.md). Harvester and Uber Pod come later.
 export const TRIPODS = {
   attacker: {
-    id: 'attacker', name: 'Attacker Tripod',
+    id: 'attacker', name: 'Attacker Tripod', short: 'Tripod', size: 1, hull: 1,
     hp: 900, speed: 16,
     laser: 8, fireEvery: 2.6,    // damage per laser bolt, seconds between 3-bolt bursts
     range: 300, cone: 0.2,       // how far the scanner light reaches, and how wide it is (radians)
+  },
+  // Campaign only. It harvests survivors and animals, and fights by stomping with its legs.
+  harvester: {
+    id: 'harvester', name: 'Harvester', short: 'Harvester', size: 1.12, hull: 1.15,
+    hp: 1300, speed: 19, harvest: true, stomp: 85,
+    laser: 0, fireEvery: 99, range: 260, cone: 0.24,
+  },
+  // The war machine. Only the Energy Sword and Laser Blaster can hurt it.
+  uber: {
+    id: 'uber', name: 'Uber Pod', short: 'Uber Pod', size: 1.4, hull: 1.3,
+    hp: 2600, speed: 21, immune: true,
+    laser: 4, fireEvery: 2.4, minigun: 8,   // laser mini guns: 8 quick bolts
+    big: 34, bigEvery: 6,                   // big laser
+    range: 620, cone: 0.3, lose: 12,        // advanced scanner: sees farther and wider, forgets slower
   },
 };
 
