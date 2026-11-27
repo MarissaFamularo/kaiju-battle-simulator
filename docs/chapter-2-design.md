@@ -257,8 +257,9 @@ Built the same day. **Claude's calls:**
 - **Star Destroyers** are our own design, not copied from anything: three long prongs around a burning core.
   They hover, fire a big beam with a red warning ring, and drop Troopers.
 - **The Moon** is alive. In the opening a Star Destroyer fires on it, it cracks, and a giant yellow eye opens.
-  In the sky its eye opens a little more each mission, and in mission 41 it fires Moon Beams at your enemies.
-  **Whether the Moon is a friend is Claude's guess. Patrick has not said. Ask him.**
+  In the sky its eye opens a little more each mission.
+  **Patrick, asked directly: the Moon is an ENEMY.** In mission 41 it fires Moon Beams at YOU, with an orange
+  warning ring first. (The first build wrongly had it helping; that was Claude's guess and was changed.)
 - Missions 39 to 41: The Tri Legion, Star Destroyer, The Moon Wakes Up. It ends "To be continued".
 
 ## Build order

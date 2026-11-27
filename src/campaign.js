@@ -750,7 +750,7 @@ export const MISSIONS = [
   // ================================================================== CHAPTER 2: THE TRI LEGION
   // Patrick, 2026-11-27: "Now a new threat. Now is chapter 2. The tripods team up with the new threat."
   // "A new alien, and in this chapter the moon wakes up." "The Tri Legion. They make tripods and have star
-  // destroyers." The missions are Claude's calls. Whether the Moon is a friend is Claude's guess: ask Patrick.
+  // destroyers." The missions are Claude's calls. Patrick says the Moon is an ENEMY.
   {
     title: 'The Tri Legion',
     part: 11, legion: true, cutscene: 'legion', scouts: 3, walkers: 1, allyFrames: ['titan', 'ranger', 'scout'],
@@ -792,30 +792,36 @@ export const MISSIONS = [
   {
     title: 'The Moon Wakes Up',
     part: 11, legion: true, scouts: 4, walkers: 2, friends: 1, allyFrames: ['titan', 'ranger', 'titan', 'scout'],
-    brief: 'The LEGION GENERAL is here with two Star Destroyers. It is the hardest fight yet. But you are not alone: the Moon is awake. It was never just a rock. It is watching, and every little while it fires a Moon Beam at your enemies. Defeat the General!',
+    brief: 'The LEGION GENERAL is here with two Star Destroyers. And it gets worse: the Moon is awake, it was never just a rock, and it is an ENEMY. Its eye is opening. When it is wide open it fires Moon Beams down at you. Watch for the orange ring on the ground and get out of it. Defeat the General!',
     start(g, s) {
       const m = g.mech.pos, B = g.city.bound - 300;
       g.spawnAwake('legionGeneral', Math.max(-B, Math.min(B, m.x + Math.sin(g.mech.yaw) * 560)), Math.max(g.city.waterEdge + 250, Math.min(B, m.z + Math.cos(g.mech.yaw) * 560)));
       g.queueShip(['legionTrooper'], 'destroyer'); g.queueShip(['legionTrooper'], 'destroyer');
-      s.sent = true; s.beam = 12; g.moonAwake = 0.3;
+      s.sent = true; s.beam = 10; s.at = null; g.moonAwake = 0.3;
       g.hud.alert('THE LEGION GENERAL', 5, true);
       g.nav.say('rise_legionGeneral', 'The LEGION GENERAL! The leader of the Tri Legion on Earth. Shield, lasers, lightning, and it calls Troopers. Everything we have, right now!', 3, 0);
     },
     tick(g, s, dt) {
       g.moonAwake = Math.min(1, (g.moonAwake || 0) + dt * 0.05);
       if (g.moonAwake < 0.95) return;
-      if (!s.said) { s.said = true; g.hud.alert('THE MOON IS AWAKE!', 5, true); g.nav.say('moonAwake', 'Look at the Moon! Its eye is wide open. It is alive, and it is on OUR side!', 3, 0); }
+      if (!s.said) { s.said = true; g.hud.alert('THE MOON IS AWAKE!', 5, true); g.nav.say('moonAwake', 'Look at the Moon! Its eye is wide open, and it is looking right at us. It is on THEIR side. Watch out for its beam!', 3, 0); }
+      if (s.at) {
+        // the warning ring, then the beam
+        s.at.t -= dt;
+        if (Math.random() < 0.6) g.fx.ring({ x: s.at.x, y: g.city.groundAt(s.at.x, s.at.z) + 1.5, z: s.at.z }, 34, 38, 0.25, '#ffb04a', 0.85);
+        if (s.at.t <= 0) { g.moonBeam(s.at.x, s.at.z); s.at = null; }
+        return;
+      }
       s.beam -= dt;
       if (s.beam > 0) return;
-      s.beam = 16;
-      // it aims at the biggest enemy still standing
-      let best = null;
-      for (const k of g.kaijus) if (!k.dead && !k.friendly && !k.emerging && (!best || k.maxHp > best.maxHp)) best = k;
-      g.moonBeam(best);
+      s.beam = 11;
+      s.at = { x: g.mech.pos.x, z: g.mech.pos.z, t: 2 };
+      g.hud.alert('MOON BEAM COMING! MOVE!', 2.5, true);
+      g.nav.say('moonBeam', 'The Moon is aiming at you! Get out of the orange ring!', 2, 14);
     },
-    goal: (g) => (beaten(g, 'legionGeneral') ? 'Destroy the last of the Legion here' : 'Defeat the LEGION GENERAL'),
+    goal: (g) => (beaten(g, 'legionGeneral') ? 'Destroy the last of the Legion here' : 'Defeat the LEGION GENERAL (and dodge the Moon Beams)'),
     done: (g, s) => s.sent && beaten(g, 'legionGeneral') >= 1 && noneComing(g),
     failed: () => null,
-    win: 'The General has fallen! The Moon is awake, and it is turning to look at the rest of the Star Destroyers. To be continued...',
+    win: 'The General has fallen! But the Moon is awake, it is angry, and it is still staring down at the Earth. To be continued...',
   },
 ];

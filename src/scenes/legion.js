@@ -50,7 +50,7 @@ export class LegionScene {
     this.cracks = new THREE.Mesh(new THREE.IcosahedronGeometry(333, 2), new THREE.MeshBasicMaterial({ color: '#ffe27a', wireframe: true, transparent: true, opacity: 0 })); moon.add(this.cracks);
     // its eye: closed until it wakes
     this.eye = new THREE.Group();
-    const white = new THREE.Mesh(new THREE.SphereGeometry(120, 28, 18), new THREE.MeshBasicMaterial({ color: '#ffe27a' })); white.scale.z = 0.25; this.eye.add(white);
+    const white = new THREE.Mesh(new THREE.SphereGeometry(120, 28, 18), new THREE.MeshBasicMaterial({ color: '#ff8a2a' })); white.scale.z = 0.25; this.eye.add(white);
     const pupil = new THREE.Mesh(new THREE.SphereGeometry(52, 20, 14), new THREE.MeshBasicMaterial({ color: '#12060a' })); pupil.scale.set(0.55, 1, 0.3); pupil.position.z = 26; this.eye.add(pupil);
     this.pupil = pupil;
     // the eye is on the side of the Moon that faces the camera
@@ -136,7 +136,7 @@ export class LegionScene {
     else if (t < T.MADE) { if (this.enter('arrive')) { this.say('THE TRI LEGION', 'and their Star Destroyers'); audio.play('thunder'); audio.play('horn'); audio.play('alarm'); } }
     else if (t < T.FIRE) { if (this.enter('made')) { this.say('"WE MADE THE TRIPODS."', 'and the tripods that are left have joined them'); audio.play('uiBig'); } }
     else if (t < T.WAKE) { if (this.enter('fire')) { this.say('THEY ARE FIRING ON THE MOON!', ''); audio.play('plasma'); audio.play('laser'); } }
-    else if (this.enter('wake')) { this.say('...AND THE MOON WAKES UP', 'it was never just a rock'); audio.play('rumble'); audio.play('roar'); }
+    else if (this.enter('wake')) { this.say('...AND THE MOON WAKES UP', 'it was never just a rock. and it is angry.'); audio.play('rumble'); audio.play('roar'); }
     if (t >= T.END) this.finish();
   }
 }

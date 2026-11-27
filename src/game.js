@@ -321,7 +321,7 @@ export class Game {
     const crater = new THREE.MeshBasicMaterial({ color: '#9a9aaa', ...noFog });
     for (let i = 0; i < 12; i++) { const c = new THREE.Mesh(new THREE.CircleGeometry(40 + Math.random() * 80, 14), crater); const d = new THREE.Vector3().randomDirection(); c.position.copy(d).multiplyScalar(623); c.lookAt(d.clone().multiplyScalar(1500)); ball.add(c); }
     const eye = this.moonEye = new THREE.Group();
-    const white = new THREE.Mesh(new THREE.SphereGeometry(230, 24, 16), new THREE.MeshBasicMaterial({ color: '#ffe27a', ...noFog })); white.scale.z = 0.2; eye.add(white);
+    const white = new THREE.Mesh(new THREE.SphereGeometry(230, 24, 16), new THREE.MeshBasicMaterial({ color: '#ff8a2a', ...noFog })); white.scale.z = 0.2; eye.add(white); // an angry orange eye
     const pupil = this.moonPupil = new THREE.Mesh(new THREE.SphereGeometry(100, 16, 12), new THREE.MeshBasicMaterial({ color: '#12060a', ...noFog })); pupil.scale.set(0.5, 1, 0.3); pupil.position.z = 40; eye.add(pupil);
     const toYou = new THREE.Vector3(2600, -3700, 3800).normalize();
     eye.position.copy(toYou).multiplyScalar(600); eye.lookAt(toYou.clone().multiplyScalar(3000));
@@ -331,18 +331,20 @@ export class Game {
     this.scene.add(sky);
   }
 
-  // The Moon helps: a pale beam from the sky onto one enemy.
-  moonBeam(target) {
-    if (!target || !this.moonBall) return;
-    const to = target.hitCache ? target.hitCache[0].p.clone() : target.pos.clone();
+  // The Moon is an ENEMY (Patrick, 2026-11-27). Its beam comes down from its eye onto a spot on the ground.
+  // The mission shows a warning ring first; this is the moment it lands.
+  moonBeam(x, z) {
+    if (!this.moonBall) return;
+    const to = new THREE.Vector3(x, this.city.groundAt(x, z) + 4, z);
     const from = this.moonBall.getWorldPosition(new THREE.Vector3()).sub(to).normalize().multiplyScalar(1400).add(to);
-    for (let i = 0; i <= 26; i++) this.fx.glow(from.clone().lerp(to, i / 26), new THREE.Color('#fff2b0'), 70, 0.7);
-    this.fx.explosion(to, 1.8); this.fx.flash(to, '#fff2b0', 12000, 0.4);
-    audio.play('thunder', to, 1.3); this.shake(1, to);
-    target.shield = 0;
-    target.takeDamage(600, to, null, { source: 'moon', weapon: 'laser' });
-    this.hud.alert('MOON BEAM!', 2.5);
-    this.nav.say('moonBeam', 'The Moon is helping us! That beam came from its eye!', 2, 25);
+    for (let i = 0; i <= 26; i++) this.fx.glow(from.clone().lerp(to, i / 26), new THREE.Color('#ffb04a'), 70, 0.7);
+    this.fx.explosion(to, 2); this.fx.flash(to, '#ffb04a', 12000, 0.4);
+    this.city.damageArea(to, 45, 900, { source: 'tripod', force: 1.8 });
+    audio.play('thunder', to, 1.3); this.shake(1.4, to);
+    const m = this.mech;
+    if (m && !m.dead && Math.hypot(m.pos.x - x, m.pos.z - z) < 40 + m.radius) m.takeDamage(42 * (m.mega > 1 ? 4 : 1), to);
+    if (this.pilot && !this.pilot.dead && Math.hypot(this.pilot.pos.x - x, this.pilot.pos.z - z) < 32) this.pilot.takeDamage(20, to);
+    for (const sc of this.scouts.list) if (!sc.dead && Math.hypot(sc.pos.x - x, sc.pos.z - z) < 45) this.scouts.hurt(sc, 200, to);
   }
 
   // Part 6: the Earth has been corrupted. A sick green haze, purple growths all over the land, glowing nests.
