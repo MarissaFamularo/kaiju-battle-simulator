@@ -207,7 +207,7 @@ class App {
     $('end-title').textContent = win ? 'VICTORY' : s.title;
     $('end-sub').textContent = win ? `${this.hangar.cfg.name} saved the city!` : s.sub;
     $('end-stats').innerHTML = [
-      ['Kaiju defeated', s.kills - (s.tripods || 0)], ['Tripods destroyed', s.tripods || 0], ['Weak spot hits', s.weak], ['Buildings smashed', s.buildings], ['Damage dealt', s.damage],
+      ['Kaiju defeated', s.kills - (s.tripods || 0)], ['Tripods destroyed', s.tripods || 0], ...(s.saved !== null && s.saved !== undefined ? [['Survivors saved', s.saved]] : []), ['Weak spot hits', s.weak], ['Buildings smashed', s.buildings], ['Damage dealt', s.damage],
       ['Waves reached', s.wave], ['Power plant', `${s.plant}%`], ['Battle time', s.time],
     ].map(([a, b]) => `<div>${a} <b>${b}</b></div>`).join('');
     $('btn-endless').style.display = win ? '' : 'none';

@@ -34,6 +34,7 @@ export class HUD {
       { id: 'gunship', k: '2', n: 'Gunship' },
       { id: 'jets', k: '3', n: 'Airstrike' },
       ...(cfg.chest === 'missiles' ? [{ id: 'missiles', k: 'E', n: 'Missiles' }] : []),
+      ...(this.freePlay ? [{ id: 'repair', k: 'R', n: 'Repair' }, { id: 'rescue', k: '4', n: 'Truck' }] : []),
       { id: 'eject', k: 'F', n: 'Eject' },
     ];
     for (const a of list) {
@@ -82,7 +83,10 @@ export class HUD {
     if (this.alertT <= 0 && this.alertEl.textContent) { this.alertEl.textContent = ''; this.alertEl.classList.remove('blink'); }
     this.vigA = Math.max(0, this.vigA - dt * 1.5);
     this.vig.style.opacity = this.vigA.toFixed(2);
-    this.score.innerHTML = `Kaiju defeated <b>${g.stats.kills}</b><br>Buildings smashed <b>${g.city.destroyed}</b>`;
+    if (g.camps) {
+      const c = g.camps, up = c.bunkers.filter((k) => k.b.alive).length;
+      this.score.innerHTML = `Survivors saved <b>${c.saved}</b>${c.aboard ? ` &nbsp;(aboard <b>${c.aboard}</b>)` : ''}<br>Scrap <b>${c.inv.scrap}</b> &nbsp;Energy <b>${c.inv.energy}</b> &nbsp;Food <b>${c.inv.food}</b><br>Bunkers <b>${up}/${c.bunkers.length}</b> &nbsp;Enemies beaten <b>${g.stats.kills}</b>`;
+    } else this.score.innerHTML = `Kaiju defeated <b>${g.stats.kills}</b><br>Buildings smashed <b>${g.city.destroyed}</b>`;
 
     // abilities
     const setAb = (id, frac, ready, label) => {
@@ -102,6 +106,11 @@ export class HUD {
       setAb(id, cd / BACKUP[id].cooldown, cd <= 0);
     }
     setAb('eject', 0, true, pilotOut ? 'Board' : 'Eject');
+    if (g.camps) {
+      const c = g.camps;
+      setAb('repair', 0, c.inv.scrap > 0 && c.inv.energy > 0 && !!m && m.hp < m.maxHp - 1);
+      setAb('rescue', Math.max(0, c.truckCd) / 25, c.truckCd <= 0);
+    }
 
     // target kaiju bar: nearest revealed living kaiju
     let tk = null, td = Infinity;
@@ -206,6 +215,23 @@ export class HUD {
       const [px, py] = toR(pc.x, pc.z);
       c.fillStyle = '#ffd23a'; c.fillRect(px - 6, py - 6, 12, 12);
       c.fillStyle = '#000'; c.font = 'bold 9px sans-serif'; c.fillText('P', px, py + 3);
+    }
+    // survivor camps (green tents) and bunkers (B)
+    if (g.camps) {
+      const pin = (x, z) => { let [a, b] = toR(x, z); const d = Math.hypot(a, b); if (d > R - 8) { a *= (R - 8) / d; b *= (R - 8) / d; } return [a, b]; };
+      for (const cp of g.camps.camps) {
+        if (cp.crushed) continue;
+        const [x, y] = pin(cp.x, cp.z);
+        c.fillStyle = cp.stocked ? '#7dff5a' : '#4d8a3e';
+        c.beginPath(); c.moveTo(x, y - 5); c.lineTo(x + 5, y + 4); c.lineTo(x - 5, y + 4); c.closePath(); c.fill();
+        if (cp.people.length) { c.fillStyle = '#fff'; c.fillRect(x - 1, y - 1, 2, 3); }
+      }
+      for (const k of g.camps.bunkers) {
+        if (!k.b.alive) continue;
+        const [x, y] = pin(k.x, k.z);
+        c.fillStyle = '#38d8ff'; c.fillRect(x - 5, y - 5, 10, 10);
+        c.fillStyle = '#000'; c.font = 'bold 9px sans-serif'; c.fillText('B', x, y + 3);
+      }
     }
     // places on the huge map, pinned to the rim when they are far away
     if (g.city.places) {

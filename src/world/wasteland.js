@@ -46,7 +46,7 @@ export function terrainHeight(x, z) {
   const edge = Math.max(Math.abs(x), Math.abs(z));
   const k = smooth(edge, FLAT + 40, FLAT + 340); // 0 inside the city, 1 out in the wild
   if (k <= 0) return 0;
-  let h = (fbm(x / 300, z / 300) - 0.5) * 44;
+  let h = 13 + (fbm(x / 300, z / 300) - 0.5) * 44; // gently rolling, mostly above the water
   // the giant hill
   const dh = Math.hypot(x - PLACES.hill.x, z - PLACES.hill.z);
   const hk = 1 - smooth(dh, 0, 1080);

@@ -355,7 +355,7 @@ export class Kaiju {
       if (Math.hypot(t.pos.x - center.x, t.pos.z - center.z) < radius + t.radius + 14) t.takeDamage(dmg * 1.6, t.hitCache[0].p.clone(), f, { source: 'kaiju', knockback: 30 });
     }
     if (T && T.kind === 'plant' && T.ent.alive) {
-      const pt = new THREE.Vector3(THREE.MathUtils.clamp(center.x, T.ent.x - T.ent.hw, T.ent.x + T.ent.hw), Math.min(center.y, T.ent.h * 0.6), THREE.MathUtils.clamp(center.z, T.ent.z - T.ent.hd, T.ent.z + T.ent.hd));
+      const pt = new THREE.Vector3(THREE.MathUtils.clamp(center.x, T.ent.x - T.ent.hw, T.ent.x + T.ent.hw), Math.min(center.y, T.ent.h - 1), THREE.MathUtils.clamp(center.z, T.ent.z - T.ent.hd, T.ent.z + T.ent.hd));
       if (pt.distanceTo(center) < radius + 25) g.city.damage(T.ent, dmg * 1.5, pt, f, { source: 'kaiju' });
     }
   }

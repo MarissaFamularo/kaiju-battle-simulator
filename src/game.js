@@ -12,6 +12,7 @@ import { Drones } from './entities/drones.js';
 import { Pilot } from './entities/pilot.js';
 import { Tripod, lightningStrike } from './entities/tripod.js';
 import { Aliens } from './entities/aliens.js';
+import { Camps } from './entities/camps.js';
 import { audio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -45,6 +46,7 @@ export class Game {
     this.military = new Military(this);
     this.drones = new Drones(this);
     this.aliens = new Aliens(this);
+    this.camps = kind === 'wasteland' ? new Camps(this) : null; // survivor camps and bunkers
     this.kaijus = [];
     this.warnings = [];
     this.mech = null;
@@ -99,6 +101,7 @@ export class Game {
     this.carrier = this.drones.spawnCarrier(cfg.glow, new THREE.Vector3(LAND.x, 1600, LAND.z + 600));
     this.landing = { t: 0, released: false, landed: false, vy: 0 };
     this.state = 'landing';
+    this.hud.freePlay = mode === 'freeplay';
     this.hud.setup(cfg);
     this.over = false;
     this.lastLowArmor = 0;
@@ -297,6 +300,7 @@ export class Game {
       this.projectiles.update(dt);
       this.military.update(dt);
       this.aliens.update(dt);
+      if (this.camps) this.camps.update(dt);
       this.drones.update(dt, this.mech && this.state !== 'landing' ? this.mech.pos : null);
     }
     if (playing) {
@@ -338,6 +342,8 @@ export class Game {
       this.cooldowns.missiles = BACKUP.missiles.cooldown;
       this.nav.say('missiles', 'Missile bay open! Fox two!', 1, 20);
     }
+    if (this.camps && input.pressed('KeyR')) this.camps.repair();
+    if (this.camps && input.pressed('Digit4')) this.camps.callTruck();
     if (input.pressed('KeyF')) this.toggleEject();
     if (input.pressed('KeyV')) {
       this.app.settings.voice = !this.app.settings.voice;
@@ -474,6 +480,7 @@ export class Game {
     if (this.app.settings.music) audio.startMusic();
     if (this.mode === 'freeplay') {
       setTimeout(() => this.nav.say('freePlay', 'Free Play! This is the big map. The giant hill is east, the beach and the storm are north, the forest is northwest and the crater is southwest. Kaiju and tripods can show up anywhere.', 3, 0), 6000);
+      setTimeout(() => this.nav.say('freePlay2', 'Look for green flags: those are survivor camps. Get out with F to collect supplies, or stand your Jaeger next to a camp to pick up survivors and carry them to a bunker.', 2, 0), 22000);
     }
     if (this.mode === 'smash') {
       setTimeout(() => this.nav.say('smashMode', 'Free Smash mode! Smash anything you want. Press K whenever you want a kaiju to show up, or T for a tripod.', 3, 0), 6000);
@@ -554,10 +561,10 @@ export class Game {
     }
   }
 
-  // Free play has no repair crews yet (survivor camps come next), so wins patch you up.
+  // A win patches up a little armor. Real repairs come from scrap and energy found at survivor camps (R).
   fieldRepair() {
     if (this.mode !== 'freeplay' || !this.mech || this.mech.dead) return;
-    this.mech.hp = Math.min(this.mech.maxHp, this.mech.hp + this.mech.maxHp * 0.3);
+    this.mech.hp = Math.min(this.mech.maxHp, this.mech.hp + this.mech.maxHp * 0.1);
   }
 
   updateReveal(dt) {
@@ -788,6 +795,12 @@ export class Game {
   }
 
   onPlantDamaged(b, amount, src) {
+    if (b.bunker) {
+      if (b.hp <= 0) { if (this.camps) this.camps.bunkerLost(b); return; }
+      this.nav.say('bunkerHit', `${b.name} is under attack! Survivors are hiding in there. Get that kaiju away from it!`, 3, 15);
+      this.hud.alert(`${b.name.toUpperCase()} UNDER ATTACK`, 2, true);
+      return;
+    }
     if (src === 'mech' || src === 'player' || src === 'landing') {
       this.nav.say('plantOops', 'Hey! Careful! That is the power plant we are protecting!', 2, 10);
     } else if (src === 'kaiju') {
@@ -844,6 +857,7 @@ export class Game {
     return {
       kills: this.stats.kills,
       tripods: this.stats.tripods,
+      saved: this.camps ? this.camps.saved : null,
       weak: this.stats.weakHits,
       buildings: this.city.destroyed,
       damage: Math.round(this.stats.damage),

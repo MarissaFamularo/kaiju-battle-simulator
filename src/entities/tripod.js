@@ -338,6 +338,9 @@ export class Tripod {
       const ref = m ? m.pos : this.pos;
       const a = Math.random() * Math.PI * 2, d = 140 + Math.random() * 320;
       this.waypoint = new THREE.Vector3(ref.x + Math.cos(a) * d, 0, ref.z + Math.sin(a) * d);
+      // sometimes it heads for a survivor camp instead
+      const camp = g.camps && Math.random() < 0.3 ? g.camps.randomCampNear(this.pos.x, this.pos.z, 900) : null;
+      if (camp) this.waypoint.set(camp.x, 0, camp.z);
       this.waitT = 0; this.wpAge = 0;
     }
     this.wpAge += dt;
@@ -477,6 +480,7 @@ export class Tripod {
     g.fx.dust(_c.copy(p).setY(p.y + 2), 0.6 * power, 4);
     g.shake(0.2 * power, p);
     g.city.crushCars(p.x, p.z, 9);
+    if (g.camps) g.camps.stomp(p); // tripods flatten survivor camps
     g.city.damageArea(_c.copy(p).setY(p.y + 4), 8, 260 * power, { source: 'tripod', force: 1.1 });
   }
 

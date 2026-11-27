@@ -481,6 +481,7 @@ export class City {
 
   damage(b, amount, point, dir, opts = {}) {
     if (!b.alive) return;
+    if (b.bunker && opts.source !== 'kaiju') return; // only kaiju can hurt a bunker (no friendly fire, no tripod feet)
     b.hp -= amount;
     if (point) {
       if (amount > 8 && Math.random() < 0.6) this.spawnChips(b, point, dir, Math.min(6, 1 + Math.floor(amount / 20)));
@@ -571,7 +572,7 @@ export class City {
     const ph = 3 + Math.min(18, b.h * 0.09);
     const pile = new THREE.Mesh(this.pileGeo, this.rubbleMat);
     pile.scale.set(b.hw * 1.15, ph, b.hd * 1.15);
-    pile.position.set(b.x, 0, b.z);
+    pile.position.set(b.x, this.groundAt(b.x, b.z), b.z);
     pile.rotation.y = Math.random() * Math.PI * 2;
     pile.receiveShadow = true; pile.castShadow = true;
     this.root.add(pile);

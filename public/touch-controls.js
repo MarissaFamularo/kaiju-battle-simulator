@@ -179,7 +179,7 @@
     holdButton(voiceB, function () { tap('KeyV'); }, function () {}, false);
 
     // ---- ability tiles at the bottom become buttons ----
-    var TILE_KEY = { drones: 'KeyQ', apache: 'Digit1', gunship: 'Digit2', jets: 'Digit3', missiles: 'KeyE', eject: 'KeyF' };
+    var TILE_KEY = { drones: 'KeyQ', apache: 'Digit1', gunship: 'Digit2', jets: 'Digit3', missiles: 'KeyE', repair: 'KeyR', rescue: 'Digit4', eject: 'KeyF' };
     var abBox = document.getElementById('abilities');
     function tileFor(target) {
       var ab = app.hud && app.hud.abEls;

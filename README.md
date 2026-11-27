@@ -27,6 +27,8 @@ A game by Patrick. Build your own Jaeger, drop from a space station into a big 3
 | V | Navigator voice on/off |
 | K | Summon a kaiju (Free Smash mode) |
 | T | Summon a tripod (Free Smash mode) |
+| R | Repair armor with scrap + energy (Free Play) |
+| 4 | Call a rescue truck to a nearby camp (Free Play) |
 | Esc | Pause |
 
 ### Weapons
@@ -61,7 +63,12 @@ Patrick's full design is in `docs/chapter-2-design.md`. Built so far:
 
 - **FREE PLAY mode: the huge map.** A destroyed city next to a giant hill you can climb, a beach and a stormy sea to the north, a river with a broken bridge, a forest, south hills, and a crater holding the head of a wrecked tripod (get too close and monsters crawl out). Kaiju and tripods turn up anywhere around you. Hills block a tripod's scanner. The radar shows where each place is. Beating an enemy repairs 30% of your armor until survivor camps are built.
 
-Still to come: survivor camps and bunkers, the Harvester and Uber Pod, the campaign, and the new space intro.
+- **Survivor camps** (green flags, green triangles on the radar). Get out with F and walk into the glowing green crates to collect resources. They are random and different every visit: scrap metal and energy, and sometimes food, a crate of missiles (restocks all backup), or a new part (more armor, speed or power). Crates come back after about two minutes. If a tripod steps on a camp, it is flattened and its resources are gone.
+- **R repairs armor** by 30% using 1 scrap + 1 energy.
+- **Saving survivors.** Stand your Jaeger next to a camp and up to 6 survivors climb aboard; carry them to a bunker (blue B on the radar). Or press **4** near a camp to call a rescue truck from the nearest bunker.
+- **Bunkers** are underground. Tripod feet cannot hurt them, but kaiju attack the hatch, so protect them.
+
+Still to come: the Harvester and Uber Pod, the campaign, and the new space intro.
 
 ### Modes
 

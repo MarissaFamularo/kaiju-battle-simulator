@@ -85,6 +85,6 @@ Kaiju and tripods also **fight each other**.
 1. **(Built 2026-11-27.) Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,
    horn, lasers, hiding, capsule aliens, tripods vs kaiju). New INVASION mode.
 2. The huge new map with free play. **(Built 2026-11-27: `src/world/wasteland.js`, FREE PLAY mode.)**
-3. Survivor camps, resources, bunkers, carrying survivors.
+3. Survivor camps, resources, bunkers, carrying survivors. **(Built 2026-11-27: `src/entities/camps.js`. Claude's calls: R repairs with 1 scrap + 1 energy; survivors board when the Jaeger stands by a camp; 4 calls a truck; people at a stomped camp run away unhurt.)**
 4. Harvester, Uber Pod, Laser Blaster weapon, campaign missions.
 5. The new space intro.
