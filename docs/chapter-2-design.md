@@ -24,6 +24,10 @@ Kaiju and tripods also **fight each other**.
 - When it spots you: **the lights turn red and it makes a loud horn sound.**
 - When it spots you it also **sends down a capsule that shoots out aliens** (see below).
 
+- **(Patrick, 2026-11-27, after playing.)** Tripods **attack the scout Jaegers too**, and they **roam and
+  search around the map** instead of always going after him. The scanner light **does not swing back and
+  forth all the time**: it points ahead, and only sometimes turns to look around.
+
 ### Three types (more in the future)
 1. **Attacker tripod** (the normal one). Shoots lasers at your mech. Same height as your Jaeger.
 2. **Harvester** (campaign missions only). Harvests **survivors from camps and animals**,

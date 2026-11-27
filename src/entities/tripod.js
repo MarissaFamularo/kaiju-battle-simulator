@@ -364,10 +364,32 @@ export class Tripod {
     return best;
   }
 
+  // The scanner mostly points straight ahead. Now and then it turns to look somewhere, holds, and comes back.
+  lookAround(dt) {
+    this.lookT = (this.lookT ?? 2 + Math.random() * 4) - dt;
+    if (this.lookT <= 0) {
+      if (this.lookTo) { this.lookTo = 0; this.lookT = 5 + Math.random() * 7; }           // back to straight ahead for a while
+      else { this.lookTo = (Math.random() < 0.5 ? -1 : 1) * (0.45 + Math.random() * 0.55); this.lookT = 1.8 + Math.random() * 2.2; } // a look to one side
+    }
+    const d = (this.lookTo || 0) - this.headYaw;
+    this.headYaw += THREE.MathUtils.clamp(d, -dt * 0.8, dt * 0.8);
+  }
+
+  // a scout Jaeger caught in the light
+  scoutInLight() {
+    const sc = this.game.scouts;
+    if (!sc) return null;
+    for (const s of sc.list) {
+      if (s.dead || Math.hypot(s.pos.x - this.pos.x, s.pos.z - this.pos.z) > this.spec.range) continue;
+      if (this.inLight(_d.copy(s.pos).setY(s.pos.y + 28), s.radius + 4)) return s;
+    }
+    return null;
+  }
+
   updateSearch(dt) {
     const g = this.game;
     this.alert = Math.max(0, this.alert - dt * 2);
-    this.headYaw = Math.sin(g.time * 0.75 + this.pos.x) * 1.0;
+    this.lookAround(dt);
     // spot the Jaeger or the pilot inside the light
     let seen = null;
     const m = g.mech;
@@ -380,6 +402,19 @@ export class Tripod {
     // kaiju and tripods fight each other
     const k = this.nearestKaiju(280);
     if (k) { this.target = { kind: 'kaiju', ent: k }; this.lostT = 0; this.setState('attack'); return; }
+    // scout Jaegers get attacked too, when the light finds one
+    this.scoutT = (this.scoutT || 0) - dt;
+    if (this.scoutT <= 0) {
+      this.scoutT = 0.3;
+      const sc = this.scoutInLight();
+      if (sc) {
+        this.target = { kind: 'scout', ent: sc }; this.lostT = 0; this.spotT = 0;
+        this.setState('alarm');
+        audio.play('horn', this.pos, 1.1);
+        g.nav.say('scoutSpotted', `${this.name} spotted ${sc.name}! Its lights turned red.`, 1, 25);
+        return;
+      }
+    }
     // the Emperor Pod harvests while it hunts
     if (this.spec.harvest) {
       const prey = g.camps ? g.camps.nearestPrey(this.pos.x, this.pos.z) : null;
@@ -393,17 +428,20 @@ export class Tripod {
     }
     // patrol: wander around near the Jaeger, sweeping the light
     if (!this.waypoint) {
-      const ref = m ? m.pos : this.pos;
-      const a = Math.random() * Math.PI * 2, d = 140 + Math.random() * 320;
-      this.waypoint = new THREE.Vector3(ref.x + Math.cos(a) * d, 0, ref.z + Math.sin(a) * d);
+      // roam: mostly it wanders off on its own; only now and then does it search where the Jaeger is
+      const near = m && Math.random() < 0.22;
+      const ref = near ? m.pos : this.pos;
+      const B = g.city.bound - 100;
+      const a = Math.random() * Math.PI * 2, d = near ? 140 + Math.random() * 320 : 350 + Math.random() * 650;
+      this.waypoint = new THREE.Vector3(THREE.MathUtils.clamp(ref.x + Math.cos(a) * d, -B, B), 0, THREE.MathUtils.clamp(ref.z + Math.sin(a) * d, g.city.waterEdge + 60, B));
       // sometimes it heads for a survivor camp instead
-      const camp = g.camps && Math.random() < 0.3 ? g.camps.randomCampNear(this.pos.x, this.pos.z, 900) : null;
+      const camp = g.camps && Math.random() < 0.25 ? g.camps.randomCampNear(this.pos.x, this.pos.z, 900) : null;
       if (camp) this.waypoint.set(camp.x, 0, camp.z);
       this.waitT = 0; this.wpAge = 0;
     }
     this.wpAge += dt;
     const dist = this.moveToward(this.waypoint, this.speed, dt, 30);
-    if (dist < 34 || this.wpAge > 40) {
+    if (dist < 34 || this.wpAge > 70) {
       this.waitT += dt; // stand and scan for a moment, then pick a new spot
       if (this.waitT > 2.5) this.waypoint = null;
     }
@@ -428,7 +466,7 @@ export class Tripod {
     this.pos.addScaledVector(this.vel, dt);
     this.faceTarget(dt);
     if (this.stateT > (this.spec.immune ? 0.5 : 1.6)) { // the Uber Pod comes for you at once
-      if (this.capsuleCd <= 0 && this.game.mech && !this.game.mech.dead && this.game.aliens) {
+      if (this.target && this.target.kind !== 'scout' && this.capsuleCd <= 0 && this.game.mech && !this.game.mech.dead && this.game.aliens) {
         this.capsuleCd = this.type === 'emperor' ? 90 : 45;
         this.game.aliens.launchCapsule(this.headPos().setY(this.pos.y + this.bodyY + 6), this.game.mech);
       }
@@ -442,6 +480,7 @@ export class Tripod {
     if (!T) return null;
     if (T.kind === 'mech') return T.ent.chestPos(out);
     if (T.kind === 'pilot') return out.copy(T.ent.pos).setY(T.ent.pos.y + 2);
+    if (T.kind === 'scout') return out.copy(T.ent.pos).setY(T.ent.pos.y + 28);
     return out.copy(T.ent.hitCache[0].p);
   }
 
@@ -468,6 +507,12 @@ export class Tripod {
       if (back) T = this.target = back; else { this.target = null; this.setState('search'); return; }
     }
     if (T.kind === 'mech' && g.pilot && T.ent.dead) { this.target = null; this.setState('search'); return; }
+    // busy with a scout, but the player walked into the light: switch to the player
+    if (T.kind === 'scout' && g.state === 'play') {
+      const m = g.mech;
+      if (g.pilot && !g.pilot.dead && this.inLight(_d.copy(g.pilot.pos).setY(g.pilot.pos.y + 2), 3)) { this.spotted({ kind: 'pilot', ent: g.pilot }); return; }
+      if (m && !m.dead && m.piloted && this.inLight(m.chestPos(_d), m.radius)) { this.spotted({ kind: 'mech', ent: m }); return; }
+    }
     const tp = this.targetPoint(new THREE.Vector3());
     const dy = this.faceTarget(dt);
     // can it still see the target?
@@ -477,8 +522,10 @@ export class Tripod {
     if (this.lostT > (this.spec.lose || 6)) {
       this.target = null;
       this.setState('search');
-      g.hud.alert('THE TRIPOD LOST YOU', 2.5);
-      g.nav.say('tripodLost', 'You lost it! Its lights went white again. Stay out of the light.', 2, 12);
+      if (T.kind !== 'scout') {
+        g.hud.alert('THE TRIPOD LOST YOU', 2.5);
+        g.nav.say('tripodLost', 'You lost it! Its lights went white again. Stay out of the light.', 2, 12);
+      }
       return;
     }
     // keep a firing distance
@@ -521,7 +568,7 @@ export class Tripod {
   // ---- Harvester: collect survivors and animals; stomp anything that gets in the way ----
   updateHarvest(dt) {
     const g = this.game;
-    this.headYaw = Math.sin(g.time * 0.5) * 0.6;
+    this.lookAround(dt);
     this.alert = Math.min(0.5, this.alert + dt); // amber lights
     const m = g.mech;
     // a pilot on foot can be captured: only the Jaeger is safe
@@ -755,6 +802,11 @@ export class Tripod {
       const m = g.mech;
       if (src === 'pilot' && g.pilot && !g.pilot.dead) this.spotted({ kind: 'pilot', ent: g.pilot });
       else if (m && !m.dead) this.spotted({ kind: 'mech', ent: m });
+    } else if (src === 'ally' && this.state === 'search' && g.scouts) {
+      // a scout Jaeger shot it: go after the nearest scout
+      let best = null, bd = 520;
+      for (const sc of g.scouts.list) { const d = Math.hypot(sc.pos.x - this.pos.x, sc.pos.z - this.pos.z); if (!sc.dead && d < bd) { bd = d; best = sc; } }
+      if (best) { this.target = { kind: 'scout', ent: best }; this.lostT = 0; this.setState('alarm'); audio.play('horn', this.pos, 1.1); }
     } else if (src === 'kaiju' && this.state === 'search') {
       const k = this.nearestKaiju(400);
       if (k) { this.target = { kind: 'kaiju', ent: k }; this.setState('attack'); }
