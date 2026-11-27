@@ -360,6 +360,34 @@ export class Tripod {
       for (const key of ['hull', 'trim', 'dark']) { const mt = m.mats[key]; mt.transparent = this.fade < 0.98; mt.opacity = this.fade; }
       m.mats.strip.emissiveIntensity = 2.2 * this.fade;
     }
+    if (sp.grow && !this.dead && !this.emerging) {
+      // a Baby Tripod that is left alone grows up
+      this.growT = (this.growT || 0) + dt;
+      if (this.growT > sp.grow.after && g.state === 'play') {
+        const p = m.body.position.clone();
+        g.fx.ring(p, 4, 60, 0.6, '#ff9ad8', 0.8); g.fx.flash(p, '#ff9ad8', 6000, 0.3);
+        audio.play('horn', this.pos, 0.6);
+        g.kaijus.push(new Tripod(g, { type: sp.grow.into, x: this.pos.x, z: this.pos.z, awake: true }));
+        g.hud.alert('A BABY TRIPOD GREW UP!', 3, true);
+        g.nav.say('grewUp', 'One of the Baby Tripods grew up into a full Attacker! Catch the babies faster!', 2, 20);
+        this.dead = true; this.removeMe = true;   // it did not die: it changed
+        g.physics.remove(this.body); this.body = null;
+        return;
+      }
+    }
+    if (sp.summon && sp.summon.always && !this.dead && !this.emerging && g.state === 'play') {
+      this.summonCd -= dt;
+      const sm = sp.summon;
+      if (this.summonCd <= 0 && g.kaijus.filter((k) => k.type === sm.type && !k.dead).length < sm.max) {
+        this.summonCd = sm.every;
+        const a = Math.random() * 6.28;
+        const x = this.pos.x + Math.cos(a) * 60, z = this.pos.z + Math.sin(a) * 60;
+        g.fx.ring(_c.set(x, g.city.groundAt(x, z) + 2, z), 3, 40, 0.5, '#ff9ad8', 0.7);
+        g.kaijus.push(new Tripod(g, { type: sm.type, x, z, awake: true }));
+        audio.play('uiBig', this.pos, 0.7);
+        g.nav.say('factoryMade', `The Factory Pod just built another ${TRIPODS[sm.type].name}! Destroy the factory!`, 2, 25);
+      }
+    }
     if (sp.heal && !this.dead && !this.emerging) {
       // Repair Pod: fixes the other tripods near it
       for (const k of g.kaijus) {
@@ -638,7 +666,7 @@ export class Tripod {
       }
     }
     // Overlord: calls Sprinter Pods up out of the ground to help
-    if (this.spec.summon) {
+    if (this.spec.summon && !this.spec.summon.always) {
       this.summonCd -= dt;
       const sm = this.spec.summon;
       if (this.summonCd <= 0 && g.kaijus.filter((k) => k.type === sm.type && !k.dead).length < sm.max) {

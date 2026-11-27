@@ -13,6 +13,7 @@ import { Outro } from './scenes/outro.js';
 import { SneakScene } from './scenes/sneak.js';
 import { AlienMessage } from './scenes/alienMessage.js';
 import { VentureScene } from './scenes/venture.js';
+import { CorruptedScene } from './scenes/corrupted.js';
 import { MISSIONS } from './campaign.js';
 import { Game } from './game.js';
 import { audio } from './audio.js';
@@ -69,6 +70,7 @@ class App {
     this.sneak = new SneakScene(this); // part 4: sneaking into the core
     this.alienMsg = new AlienMessage(this); // the end of part 4
     this.venture = new VentureScene(this); // the start of part 5
+    this.corrupted = new CorruptedScene(this); // the start of part 6
     this.cine = this.outro; // whichever of those two is playing
     this.applySettings(this.settings);
     this.setLoad(1, 'Ready!');
@@ -204,13 +206,13 @@ class App {
       this.sneak.start(this.hangar.cfg, () => this.startGame(true));
       return;
     }
-    if (mis && mis.cutscene === 'venture') {
+    if (mis && (mis.cutscene === 'venture' || mis.cutscene === 'corrupted')) {
       this.state = 'outro';
-      this.cine = this.venture;
-      this.venture.start(() => this.startGame(true));
+      this.cine = mis.cutscene === 'venture' ? this.venture : this.corrupted;
+      this.cine.start(() => this.startGame(true));
       return;
     }
-    if (mis && mis.alien) { this.state = 'game'; this.startGame(true); return; } // already on the planet: no drop
+    if (mis && (mis.alien || mis.corrupt)) { this.state = 'game'; this.startGame(true); return; } // already on the ground: no drop
     const ch2 = ['campaign', 'freeplay', 'invasion'].includes(this.hangar.settings.mode);
     const variant = !ch2 ? 'classic' : this.introSeen ? 'invasionShort' : 'invasion';
     if (ch2) this.introSeen = true;
@@ -279,7 +281,7 @@ class App {
     end.classList.toggle('end-defeat', !win);
     const camp = s.campaign;
     $('end-title').textContent = win ? (camp ? (camp.last ? 'CAMPAIGN COMPLETE' : 'MISSION COMPLETE') : 'VICTORY') : s.title;
-    $('end-sub').textContent = win ? (camp ? (camp.last ? `${this.hangar.cfg.name} planted the bomb and the alien planet is gone. But the war is not over yet...` : `Mission ${camp.n}: ${camp.title}`) : `${this.hangar.cfg.name} saved the city!`) : s.sub;
+    $('end-sub').textContent = win ? (camp ? (camp.last ? `${this.hangar.cfg.name} broke the corruption in the city. But the rest of the Earth is still sick...` : `Mission ${camp.n}: ${camp.title}`) : `${this.hangar.cfg.name} saved the city!`) : s.sub;
     $('end-stats').innerHTML = [
       ['Kaiju defeated', s.kills - (s.tripods || 0)], ['Tripods destroyed', s.tripods || 0], ...(s.saved !== null && s.saved !== undefined ? [['Survivors saved', s.saved]] : []), ['Weak spot hits', s.weak], ['Buildings smashed', s.buildings], ['Damage dealt', s.damage],
       ['Waves reached', s.wave], ['Power plant', `${s.plant}%`], ['Battle time', s.time],

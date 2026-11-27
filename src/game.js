@@ -132,7 +132,7 @@ export class Game {
     this.attacked = false;
     audio.intensity = 0.2;
     this.clouds();
-    if ((this.mission && this.mission.part >= 3 && !this.mission.core && !this.mission.alien) || mode === 'freeplay') this.skyFleet();
+    if ((this.mission && this.mission.part >= 3 && !this.mission.core && !this.mission.alien && !this.mission.corrupt) || mode === 'freeplay') this.skyFleet();
     if (grounded) this.startGrounded();
   }
 
@@ -296,6 +296,39 @@ export class Game {
       const c = new THREE.Mesh(new THREE.ConeGeometry(5 + Math.random() * 10, h, 5), i % 2 ? spire : spire2);
       c.position.set(x, this.city.groundAt(x, z) + h / 2 - 4, z); this.scene.add(c);
     }
+  }
+
+  // Part 6: the Earth has been corrupted. A sick green haze, purple growths all over the land, glowing nests.
+  enterCorruption() {
+    this.scene.fog = new THREE.Fog('#2f4a33', 320, 3000);
+    this.scene.background = new THREE.Color('#16241a');
+    if (this.city.sky) this.city.sky.visible = false;
+    if (this.city.sun) { this.city.sun.color.set('#c8ffb0'); this.city.sun.intensity *= 0.8; }
+    this.scene.add(new THREE.HemisphereLight('#8aff9a', '#3a1a4a', 0.8));
+    const sky = this.sky = new THREE.Group();
+    const noFog = { fog: false, depthWrite: false };
+    sky.add(new THREE.Mesh(new THREE.SphereGeometry(8000, 24, 16), new THREE.MeshBasicMaterial({ color: '#1c3020', side: THREE.BackSide, ...noFog })));
+    this.skyShips = new THREE.Group(); this.skyWreck = new THREE.Group();
+    // far-off hive towers on the horizon
+    const tower = new THREE.MeshBasicMaterial({ color: '#6a2a8a', ...noFog });
+    for (let i = 0; i < 14; i++) { const a = i * 0.45 + 0.2, h = 900 + (i % 4) * 400; const t = new THREE.Mesh(new THREE.ConeGeometry(160 + (i % 3) * 80, h, 6), tower); t.position.set(Math.cos(a) * 5200, h / 2 - 100, Math.sin(a) * 5200); this.skyWreck.add(t); }
+    sky.add(this.skyShips, this.skyWreck);
+    this.scene.add(sky);
+    // growths across the land near where you are
+    const vine = new THREE.MeshStandardMaterial({ color: '#5a1f7a', roughness: 0.7, emissive: '#2a0a3a', emissiveIntensity: 1 });
+    const bulb = new THREE.MeshBasicMaterial({ color: '#7dffb0' });
+    const m = this.mech.pos, N = this.lowPower ? 55 : 110;
+    const vines = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 6), vine, N), bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), bulb, N);
+    const mat = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), e = new THREE.Euler();
+    for (let i = 0; i < N; i++) {
+      const a = Math.random() * 6.28, r = 120 + Math.random() * 1900, x = m.x + Math.cos(a) * r, z = m.z + Math.sin(a) * r, h = 30 + Math.random() * 130;
+      const gy = this.city.groundAt(x, z);
+      q.setFromEuler(e.set((Math.random() - 0.5) * 0.5, 0, (Math.random() - 0.5) * 0.5));
+      vines.setMatrixAt(i, mat.compose(p.set(x, gy + h / 2 - 3, z), q, sc.set(6 + Math.random() * 9, h, 6 + Math.random() * 9)));
+      bulbs.setMatrixAt(i, mat.compose(p.set(x, gy + h + 2, z), q, sc.setScalar(4 + Math.random() * 5)));
+    }
+    vines.frustumCulled = bulbs.frustumCulled = false;
+    this.scene.add(vines, bulbs);
   }
 
   // Part 5: "hundreds of mechs... and they are all on the planet". The army that the Venture Stars dropped
@@ -734,6 +767,7 @@ export class Game {
     if (this.app.settings.music) audio.startMusic();
     // scout Jaegers help out everywhere except the story modes
     if (this.mission && this.mission.scouts) this.scouts.deploy(this.mission.scouts, this.mission.scoutPower || 1, this.mission.allyFrames || ['scout']); // some missions bring a squadron
+    if (this.mission && this.mission.corrupt) this.enterCorruption();
     if (this.mission && this.mission.alien) { this.enterAlienPlanet(); this.addArmy(this.mech.pos.x, this.mech.pos.z, this.mech.yaw); }
     if (this.mission) { for (let i = 0; i < (this.mission.friends || 0); i++) this.spawnFriend(); for (let i = 0; i < (this.mission.walkers || 0); i++) this.spawnWalker(); }
     if (!['campaign', 'mission'].includes(this.mode)) {
@@ -807,7 +841,7 @@ export class Game {
       if (busy < (this.lowPower ? 4 : 5)) { // it is a war now: more at once, and sooner
         fp.count++;
         fp.t = 24 + Math.random() * 18;
-        if (Math.random() < 0.5) this.queueTripod(fp.count > 9 && Math.random() < 0.15 && !this.kaijus.some((k) => k.type === 'emperor' && !k.dead) ? 'emperor' : fp.count > 6 && Math.random() < 0.25 ? 'uber' : fp.count > 2 && Math.random() < 0.5 ? ['sprinter', 'shield', 'mortar', 'ghost', 'splitter', 'titan', 'sniper', 'repair', 'flame', 'thunder', 'tank', 'gatling', 'blink', 'boom', 'magnet', 'leech', 'commander', 'acid', 'shadow'][Math.floor(Math.random() * 19)] : 'attacker'); // an Uber Pod now and then, later on; the Emperor Pod is rare
+        if (Math.random() < 0.5) this.queueTripod(fp.count > 9 && Math.random() < 0.15 && !this.kaijus.some((k) => k.type === 'emperor' && !k.dead) ? 'emperor' : fp.count > 6 && Math.random() < 0.25 ? 'uber' : fp.count > 2 && Math.random() < 0.5 ? ['sprinter', 'shield', 'mortar', 'ghost', 'splitter', 'titan', 'sniper', 'repair', 'flame', 'thunder', 'tank', 'gatling', 'blink', 'boom', 'magnet', 'leech', 'commander', 'acid', 'shadow', 'baby', 'factory'][Math.floor(Math.random() * 21)] : 'attacker'); // an Uber Pod now and then, later on; the Emperor Pod is rare
         else this.queueKaiju(Math.min(5, 1 + Math.floor(fp.count / 3) + (Math.random() < 0.3 ? 1 : 0)));
         audio.intensity = Math.min(1, 0.4 + fp.count * 0.04);
       } else fp.t = 10;

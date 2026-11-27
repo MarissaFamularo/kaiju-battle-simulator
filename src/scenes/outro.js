@@ -92,9 +92,10 @@ export class Outro {
   start(onDone, mode = 'planet') {
     this.onDone = onDone;
     this.mode = mode;
+    this.ships.count = this.engines.count = SHIPS;
     this.enemy.material.color.set(mode === 'bomb' ? '#3a2a5a' : '#7a2438');
     this.card.innerHTML = mode === 'bomb'
-      ? '<div style="font-weight:900;font-size:min(8vw,76px);letter-spacing:.12em;text-shadow:0 0 30px #5affc0">THE PLANET WENT BOOM</div><div style="margin-top:18px;font-size:min(3vw,24px);letter-spacing:.3em;color:#9fffd8">BUT THE WAR IS NOT OVER... PART 6 IS COMING</div>'
+      ? '<div style="font-weight:900;font-size:min(8vw,76px);letter-spacing:.12em;text-shadow:0 0 30px #5affc0">THE PLANET WENT BOOM</div><div style="margin-top:18px;font-size:min(3vw,24px);letter-spacing:.3em;color:#9fffd8">BUT SOME BABY TRIPODS ESCAPED...</div>'
       : '<div style="font-weight:900;font-size:min(9vw,84px);letter-spacing:.14em;text-shadow:0 0 30px #ff4a2a">PART 3 BEGINS</div><div style="margin-top:18px;font-size:min(3vw,24px);letter-spacing:.3em;color:#ff8a6a">THE FLEET IS COMING</div>';
     this.t = 0; this.beat = ''; this.active = true; this.t0 = (this.t0 || 0) + 1; // t0 counts the showings, so one-time beats fire again next time
     this.enemy.visible = true; this.chunks.visible = false; this.ships.visible = this.engines.visible = false;
@@ -151,6 +152,16 @@ export class Outro {
       // no fleet this time: it is over
       this.moveChunks(t - T.BOOM - 1.1);
       this.flash.material.opacity = 0; this.ring.material.opacity = Math.max(0, this.ring.material.opacity - dt * 0.3);
+      // a few tiny pods slip away from the wreck, toward the camera and off to the Earth
+      const be = t - T.FLEET, away = _p.copy(cam.position).sub(ENEMY).normalize();
+      this.ships.visible = this.engines.visible = true; this.ships.count = this.engines.count = 14;
+      const bq = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), away);
+      for (let i = 0; i < 14; i++) {
+        const bp = new THREE.Vector3().copy(ENEMY).addScaledVector(away, 500 + be * (230 + i * 14)).add(new THREE.Vector3(Math.sin(i * 2.4) * 260, Math.cos(i * 1.7) * 160, 0));
+        this.ships.setMatrixAt(i, _m.compose(bp, bq, _s.setScalar(0.9)));
+        this.engines.setMatrixAt(i, _m.compose(bp.addScaledVector(away, -22), bq, _s.setScalar(0.8)));
+      }
+      this.ships.instanceMatrix.needsUpdate = true; this.engines.instanceMatrix.needsUpdate = true;
       if (this.enter('bombCard')) { this.title('', ''); this.card.style.display = 'flex'; requestAnimationFrame(() => { this.card.style.background = 'rgba(0,0,0,0.6)'; }); audio.play('uiBig'); }
       if (t >= T.FLEET + 6) this.finish();
       return;

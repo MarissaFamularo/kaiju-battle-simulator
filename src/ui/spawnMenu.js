@@ -19,6 +19,8 @@ const CHOICES = [
   { id: 'repair', label: 'Repair Pod' },
   { id: 'flame', label: 'Flame Pod' },
   { id: 'thunder', label: 'Thunder Pod' },
+  { id: 'baby', label: 'Baby Tripods (4 of them)' },
+  { id: 'factory', label: 'Factory Pod (builds babies)' },
   { id: 'tank', label: 'Tank Pod' },
   { id: 'gatling', label: 'Gatling Pod' },
   { id: 'blink', label: 'Blink Pod' },
@@ -99,6 +101,7 @@ export class SpawnMenu {
     const busy = g.kaijus.filter((k) => !k.dead && !k.friendly).length + g.warnings.length;
     if (busy >= (g.lowPower ? 6 : MAX_ENEMIES)) { g.hud.alert('TOO MANY BAD GUYS! BEAT SOME FIRST', 2.5); return; }
     if (/^k\d$/.test(c.id)) g.queueKaiju(+c.id[1]);
+    else if (c.id === 'baby') { const m = g.mech.pos, a = g.view.yaw; for (let i = 0; i < 4; i++) g.spawnAwake('baby', m.x + Math.sin(a) * 260 + (i - 1.5) * 40, m.z + Math.cos(a) * 260 + (i % 2) * 40); g.hud.alert('BABY TRIPODS!', 3, true); }
     else if (c.id === 'ship') g.queueShip(['attacker', ['sprinter', 'shield', 'mortar', 'ghost', 'splitter', 'sniper', 'repair', 'flame', 'thunder'][Math.floor(Math.random() * 9)]]);
     else if (c.id === 'mothership') g.queueShip(['attacker', 'flame', 'repair', 'thunder', 'titan'], 'mothership');
     else g.queueTripod(c.id);

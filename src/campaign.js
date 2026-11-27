@@ -503,4 +503,65 @@ export const MISSIONS = [
     failed: (g, s) => (s.stage === 2 && s.timer <= 0 ? 'The bomb went off before you reached the Venture Star.' : null),
     win: 'You are aboard the Venture Star! Everyone is clear. Three... two... one...',
   },
+  // ------------------------------------------------------------------ PART 6: THE CORRUPTED EARTH
+  // Patrick, 2026-11-27: "After that I don't want the war to end. Some baby tripods, then they make more
+  // tripods, and when the humans get back they see Earth was corrupted." The war ends in part 10, not before.
+  {
+    title: 'Home?',
+    part: 6, corrupt: true, cutscene: 'corrupted', scouts: 2, allyFrames: ['ranger', 'scout'],
+    brief: 'Part 6! You are home. But some Baby Tripods escaped the explosion and got to the Earth first. They grew up, they built more, and now the whole Earth is corrupted. The city is crawling with Baby Tripods. Destroy 14 of them, and be quick: a baby left alone grows up into an Attacker!',
+    start(g, s) { s.sent = 0; s.wait = 2; },
+    tick(g, s, dt) {
+      s.wait -= dt;
+      if (s.sent >= 14 || s.wait > 0 || living(g).length >= (g.lowPower ? 5 : 7)) return;
+      s.wait = 7;
+      const a = Math.random() * 6.28, d = 240 + Math.random() * 200, B = g.city.bound - 200;
+      for (let i = 0; i < 3 && s.sent < 14; i++, s.sent++) g.spawnAwake('baby', Math.max(-B, Math.min(B, g.mech.pos.x + Math.cos(a) * d + i * 35)), Math.max(g.city.waterEdge + 150, Math.min(B, g.mech.pos.z + Math.sin(a) * d + (i % 2) * 35)));
+      g.hud.alert('BABY TRIPODS!', 2.5, true);
+      if (s.sent === 3) g.nav.say('rise_baby', 'Baby Tripods! They are tiny and quick, and they do not hit hard. But leave one alone for long and it grows up into a full Attacker Tripod. Get them while they are small!', 3, 0);
+    },
+    goal: (g) => `Destroy the Baby Tripods before they grow up (${Math.min(14, beaten(g, 'baby'))}/14 babies, ${beaten(g, 'attacker')} grown-ups)`,
+    done: (g, s) => s.sent >= 14 && noneComing(g),
+    failed: () => null,
+    win: 'The babies are gone from this street. But where are they all coming from?',
+  },
+  {
+    title: 'The Factory Pods',
+    part: 6, corrupt: true, scouts: 2, walkers: 1, allyFrames: ['titan', 'ranger'],
+    brief: 'Now we know how they make more tripods: Factory Pods. Each one is a slow walking factory that keeps building Baby Tripods. There are 3 of them. Destroy all 3, and every baby they built.',
+    start(g, s) {
+      const B = g.city.bound - 250, m = g.mech.pos;
+      for (let i = 0; i < 3; i++) { const a = g.mech.yaw + (i - 1) * 1.1, d = 520 + i * 170; g.spawnAwake('factory', Math.max(-B, Math.min(B, m.x + Math.sin(a) * d)), Math.max(g.city.waterEdge + 200, Math.min(B, m.z + Math.cos(a) * d))); }
+      s.sent = true;
+      g.hud.alert('3 FACTORY PODS ARE BUILDING BABIES', 5, true);
+      g.nav.say('rise_factory', 'Factory Pods! That is how they make more tripods. Each one keeps building Baby Tripods until you destroy it. They are the big brown ones on your radar.', 3, 0);
+    },
+    goal: (g) => (beaten(g, 'factory') >= 3 ? 'Destroy the last babies and grown-ups' : `Destroy the Factory Pods (${Math.min(3, beaten(g, 'factory'))}/3)`),
+    done: (g, s) => s.sent && beaten(g, 'factory') >= 3 && noneComing(g),
+    failed: () => null,
+    win: 'All three factories are scrap! No more babies from them. Now for the purple stuff growing everywhere.',
+  },
+  {
+    title: 'Hearts of the Corruption',
+    part: 6, corrupt: true, scouts: 2, walkers: 2, friends: 1, allyFrames: ['titan', 'ranger'],
+    brief: 'The purple growths are fed by Corruption Hearts: glowing purple balls hidden around the city. Destroy all 5 to clean this part of the Earth. Tripods are guarding them, and your kaiju friend and the Guardian Walkers are back to help.',
+    start(g, s) {
+      s.hearts = [];
+      const B = g.city.bound - 250, m = g.mech.pos;
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * 6.28 + 0.4, d = 480 + (i % 2) * 260;
+        const x = Math.max(-B, Math.min(B, m.x + Math.cos(a) * d)), z = Math.max(g.city.waterEdge + 200, Math.min(B, m.z + Math.sin(a) * d));
+        const h = new s0.Reactor(g, { x, z, heart: true });
+        g.kaijus.push(h); s.hearts.push(h);
+        g.spawnAwake(['attacker', 'gatling', 'baby', 'flame', 'tank'][i], x + 80, z + 50);
+      }
+      s.next = 25;
+      g.hud.alert('DESTROY THE 5 CORRUPTION HEARTS', 5, true);
+    },
+    tick(g, s, dt) { s.next -= dt; if (s.next <= 0 && beaten(g, 'heart') < 5 && living(g, (k) => !k.isShip).length < 3) { s.next = 25; for (let i = 0; i < 2; i++) g.spawnAwake('baby', g.mech.pos.x + 200 + i * 40, g.mech.pos.z + 180); } },
+    goal: (g) => (beaten(g, 'heart') >= 5 ? 'Destroy the last guards' : `Destroy the Corruption Hearts (${Math.min(5, beaten(g, 'heart'))}/5)`),
+    done: (g, s) => !!s.hearts && beaten(g, 'heart') >= 5 && noneComing(g),
+    failed: () => null,
+    win: 'The city is clean again! But this was only one city. The whole Earth is still corrupted, and the war is far from over.',
+  },
 ];

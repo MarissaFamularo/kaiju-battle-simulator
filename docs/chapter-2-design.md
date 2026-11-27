@@ -200,6 +200,21 @@ Built the same day. **Claude's calls:**
 - **Patrick's plan for the whole story (2026-11-27): "At part ten is when the war ends, but a lot more
   stuff before part ten."** Parts 6 to 10 are not designed yet. Do not end the war before part 10.
 
+## Part 6: The Corrupted Earth
+
+Patrick, 2026-11-27, in his words: "After that I don't want the war to end. Some baby tripods, then they make
+more tripods, and when the humans get back they see Earth was corrupted."
+
+Built the same day. **Claude's calls:**
+- The Part 5 ending now shows a few tiny pods escaping the explosion ("BUT SOME BABY TRIPODS ESCAPED...").
+- **Baby Tripod**: tiny, pink, quick and weak. Left alone for 45 seconds it **grows up** into an Attacker.
+- **Factory Pod**: a slow walking factory that keeps building Baby Tripods (how "they make more tripods").
+- **The return** (`src/scenes/corrupted.js`): a Venture Star comes home, the camera comes around, and the Earth
+  is covered in purple veins and glowing green nests.
+- **The corrupted Earth**: green haze, purple growths with glowing bulbs, hive towers on the horizon.
+- **Corruption Hearts**: glowing purple balls that feed the growths.
+- Missions 28 to 30: Home?, The Factory Pods, Hearts of the Corruption. The war is NOT over at the end.
+
 ## Build order
 
 1. **(Built 2026-11-27.) Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,

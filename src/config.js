@@ -319,6 +319,22 @@ Object.assign(TRIPODS, {
   },
 });
 
+// Part 6: THE CORRUPTED EARTH (Patrick, 2026-11-27): "some baby tripods, then they make more tripods".
+Object.assign(TRIPODS, {
+  baby: {
+    id: 'baby', name: 'Baby Tripod', short: 'Baby', size: 0.42, hull: 0.5, tint: '#ff9ad8',
+    hp: 110, speed: 30, laser: 2, fireEvery: 1.8, range: 190, cone: 0.26, lose: 4,
+    grow: { after: 45, into: 'attacker' },   // leave one alone and it grows up
+    intro: 'Baby Tripods! They are tiny and quick, and they do not hit hard. But leave one alone for long and it grows up into a full Attacker Tripod. Get them while they are small!',
+  },
+  factory: {
+    id: 'factory', name: 'Factory Pod', short: 'Factory', size: 1.5, hull: 1.7, tint: '#6a4a2a', boss: '#ff9ad8', radar: 4,
+    hp: 1900, speed: 6, laser: 0, fireEvery: 99, range: 300, cone: 0.24,
+    summon: { type: 'baby', every: 9, max: 5, always: true },   // it builds Baby Tripods all the time, not only in a fight
+    intro: 'A Factory Pod! That is how they make more tripods. It keeps building Baby Tripods until you destroy it.',
+  },
+});
+
 // Invasion mode waves: numbers are kaiju categories, 'T' is an attacker tripod.
 export const INVASION_WAVES = [
   ['T'],
