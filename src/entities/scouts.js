@@ -24,11 +24,13 @@ export class Scouts {
     this.want = 0;
     this.respawnT = 0;
     this.nextLook = 0;
+    this.power = 1;
   }
 
   // start a game with n scouts near the player
-  deploy(n) {
-    this.want = n;
+  // power > 1 is a veteran squadron (campaign): they hit harder and take half damage
+  deploy(n, power = 1) {
+    this.want = n; this.power = power;
     for (let i = 0; i < n; i++) this.add(140 + i * 60);
   }
 
@@ -152,13 +154,14 @@ export class Scouts {
     const h = T.hitCache[0]; // they aim for the body; finding the weak spot is your job
     const aim = h.p.clone();
     aim.x += (Math.random() - 0.5) * 8; aim.y += (Math.random() - 0.5) * 8; aim.z += (Math.random() - 0.5) * 8;
-    g.projectiles.fire({ pos: from, dir: aim.sub(from).normalize(), speed: 620, damage: BOLT, owner: 'ally', weapon: 'laser', src: s, color: s.glow, size: 9, radius: 3, smash: 0.2, life: 2.5 });
+    g.projectiles.fire({ pos: from, dir: aim.sub(from).normalize(), speed: 620, damage: BOLT * this.power, owner: 'ally', weapon: 'laser', src: s, color: s.glow, size: 9, radius: 3, smash: 0.2, life: 2.5 });
     g.fx.glow(from, new THREE.Color(s.glow), 22, 0.1);
     audio.play('laser', s.pos, 0.5);
   }
 
   hurt(s, amount, from) {
     if (s.dead) return;
+    if (this.power > 1) amount *= 0.5;
     s.hp -= amount;
     if (amount > 5) this.game.fx.sparks(this.chest(s, _b), 10);
     if (s.hp > 0) return;

@@ -9,7 +9,15 @@ const CHOICES = [
   { id: 'harvester', label: 'Harvester', needsCamps: true },
   { id: 'uber', label: 'Uber Pod' },
   { id: 'emperor', label: 'Emperor Pod' },
+  { id: 'sprinter', label: 'Sprinter Pod' },
+  { id: 'shield', label: 'Shield Pod' },
+  { id: 'mortar', label: 'Mortar Pod' },
+  { id: 'ghost', label: 'Ghost Pod' },
+  { id: 'splitter', label: 'Splitter Pod' },
+  { id: 'stormking', label: 'Boss Pod: Storm King' },
+  { id: 'overlord', label: 'Boss Pod: Overlord' },
 ];
+const PER_PAGE = 7;
 const MAX_ENEMIES = 8;
 
 export class SpawnMenu {
@@ -30,26 +38,38 @@ export class SpawnMenu {
   allowed() { return !['campaign', 'mission'].includes(this.game.mode); }
   list() { return CHOICES.filter((c) => !c.needsCamps || this.game.camps); }
 
+  // B (or the SPAWN button): page 1, then page 2, then closed
   toggle() {
     if (!this.open && !this.allowed()) { this.game.hud.alert('NO SPAWNING IN THIS MODE: TRY FREE PLAY', 2.5); return; }
-    this.open = !this.open;
+    const pages = Math.ceil(this.list().length / PER_PAGE);
+    if (!this.open) { this.open = true; this.page = 0; } else if (this.page + 1 < pages) this.page++; else this.open = false;
+    this.draw();
+  }
+
+  draw() {
     if (this.open) {
-      this.el.innerHTML = '<div style="font:900 15px Orbitron,sans-serif;letter-spacing:.12em;color:#38d8ff;margin:2px 4px 6px">SPAWN A BAD GUY</div>'
-        + this.list().map((c, i) => `<div data-i="${i}" style="display:flex;gap:10px;align-items:center;padding:9px 8px;margin-top:4px;font-size:17px;font-weight:700;border:1px solid rgba(120,220,255,.3);cursor:pointer;touch-action:none"><b style="font-family:Orbitron,sans-serif;color:#ffd23a;width:16px">${i + 1}</b>${c.label}</div>`).join('')
-        + '<div data-i="-1" style="padding:8px;margin-top:6px;text-align:center;font-weight:700;color:#9fb3c8;cursor:pointer;touch-action:none">CLOSE (B)</div>';
+      const all = this.list(), pages = Math.ceil(all.length / PER_PAGE), from = this.page * PER_PAGE;
+      const row = 'display:flex;gap:10px;align-items:center;padding:8px;margin-top:4px;font-size:17px;font-weight:700;border:1px solid rgba(120,220,255,.3);cursor:pointer;touch-action:none';
+      this.el.innerHTML = `<div style="font:900 15px Orbitron,sans-serif;letter-spacing:.12em;color:#38d8ff;margin:2px 4px 6px">SPAWN A BAD GUY  ${this.page + 1}/${pages}</div>`
+        + all.slice(from, from + PER_PAGE).map((c, i) => `<div data-i="${from + i}" style="${row}"><b style="font-family:Orbitron,sans-serif;color:#ffd23a;width:16px">${i + 1}</b>${c.label}</div>`).join('')
+        + `<div data-i="-2" style="${row};justify-content:center;color:#ffd23a">${this.page + 1 < pages ? 'MORE BAD GUYS ▸ (B)' : 'CLOSE (B)'}</div>`;
     }
     this.el.style.display = this.open ? 'block' : 'none';
   }
 
-  close() { if (this.open) this.toggle(); }
+  close() { this.open = false; this.draw(); }
+
+  // i is a position in the whole list; number keys pass a position on the page you are looking at
+  pickKey(n) { this.pick(this.page * PER_PAGE + n); }
 
   pick(i) {
+    if (i === -2) { this.toggle(); return; }
     const g = this.game, c = this.list()[i];
     this.close();
     if (!c) return;
     const busy = g.kaijus.filter((k) => !k.dead).length + g.warnings.length;
     if (busy >= MAX_ENEMIES) { g.hud.alert('TOO MANY BAD GUYS! BEAT SOME FIRST', 2.5); return; }
-    if (c.id[0] === 'k') g.queueKaiju(+c.id[1]);
+    if (/^k\d$/.test(c.id)) g.queueKaiju(+c.id[1]);
     else g.queueTripod(c.id);
   }
 }

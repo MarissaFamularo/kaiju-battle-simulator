@@ -116,7 +116,7 @@ export class HUD {
     let tk = null, td = Infinity;
     const ref = pilotOut ? g.pilot.pos : (m ? m.pos : null);
     if (ref) for (const k of g.kaijus) {
-      if (k.dead || k.emerging) continue;
+      if (k.dead || k.emerging || k.cloaked) continue;
       const d = k.pos.distanceTo(ref);
       if (d < td && d < 900) { td = d; tk = k; }
     }
@@ -260,7 +260,7 @@ export class HUD {
     for (const u of g.military.units) { const [x, y] = toR(u.pos.x, u.pos.z); c.fillRect(x - 2, y - 2, 4, 4); }
     // kaiju
     for (const k of g.kaijus) {
-      if (k.dead) continue;
+      if (k.dead || k.cloaked) continue; // a cloaked Ghost Pod is not on the radar
       let [x, y] = toR(k.pos.x, k.pos.z);
       let r = 4 + k.cat;
       { const d = Math.hypot(x, y); if (d > R - 6) { x *= (R - 6) / d; y *= (R - 6) / d; r *= 0.7; } } // far away: pinned to the rim, pointing the way

@@ -104,6 +104,23 @@ Kaiju and tripods also **fight each other**.
 5. **Lightning strikes the ground 20 times** and then a tripod rises.
 6. The game starts.
 
+## Campaign part 2: the Boss Pods
+
+Patrick, 2026-11-27, after finishing the campaign: **"new missions with new tripods like boss pods,
+and the first mission shows mechs destroying tripods until the boss pods come, and five more new
+tripods."** He did not say what the new tripods are, so every one below is **Claude's call** and
+Patrick can rename or change any of them.
+
+- **Sprinter Pod**: small, very fast, weak.
+- **Shield Pod**: a blue bubble soaks up shots, pops, and grows back after 5 quiet seconds.
+- **Mortar Pod**: stays far away and lobs slow fire bombs in a high arc.
+- **Ghost Pod**: almost invisible and off the radar until it attacks; you find it by its scanner light.
+- **Splitter Pod**: when destroyed, two Sprinter Pods climb out of the wreck.
+- **Boss Pod: Storm King**: calls lightning down on you, with a blue warning ring first.
+- **Boss Pod: Overlord**: the biggest; shield, stomp, big laser, and it calls Sprinter Pods.
+- Missions 9 to 15: Scout Squadron (scouts destroy tripods until the Boss Pod comes), Catch the
+  Sprinters, Break the Shield, Fire From the Sky, Ghost Hunt, Double Trouble, The Overlord.
+
 ## Build order
 
 1. **(Built 2026-11-27.) Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,

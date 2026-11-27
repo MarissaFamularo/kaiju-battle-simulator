@@ -207,7 +207,7 @@ export class Hangar {
     st.mission = Math.max(0, Math.min(open, st.mission ?? open));
     $('hg-mission').style.display = st.mode === 'campaign' ? '' : 'none';
     if (st.mode === 'campaign') {
-      this.opt('hg-mission', MISSIONS.map((m, i) => ({ id: i, label: i <= open ? `${i + 1}` : '🔒', sub: i <= open ? m.title : 'locked', title: i <= open ? m.brief : 'Win the mission before this one to unlock it.' })), st.mission, (i) => {
+      this.opt('hg-mission', MISSIONS.map((m, i) => ({ id: i, label: i <= open ? `${i + 1}` : '🔒', sub: i <= open ? m.title : 'locked', title: i <= open ? m.brief : 'Win the mission before this one to unlock it.' })).filter((o) => o.id <= open + 1), st.mission, (i) => {
         if (i > campaignProgress()) return;
         st.mission = i; saveSettings(st); this.refreshUI(); this.briefMission();
       });

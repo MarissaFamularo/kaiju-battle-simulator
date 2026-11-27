@@ -148,6 +148,50 @@ export const TRIPODS = {
   },
 };
 
+// ---- Campaign part 2 (Patrick, 2026-11-27): five new tripods and the boss pods. All Claude's calls. ----
+Object.assign(TRIPODS, {
+  sprinter: {
+    id: 'sprinter', name: 'Sprinter Pod', short: 'Sprinter', size: 0.75, hull: 0.8, tint: '#58c97a',
+    hp: 450, speed: 34, laser: 5, fireEvery: 1.6, range: 280, cone: 0.22,
+    intro: 'A Sprinter Pod! It is small and very fast. It is weak, so catch it and it will not last long.',
+  },
+  shield: {
+    id: 'shield', name: 'Shield Pod', short: 'Shield', size: 1.1, hull: 1.1, tint: '#4a86d8',
+    hp: 900, speed: 15, laser: 8, fireEvery: 2.6, range: 300, cone: 0.2,
+    shield: 350, shieldWait: 5,   // the bubble soaks up this much damage, and starts refilling after this many quiet seconds
+    intro: 'A Shield Pod! That blue bubble soaks up your shots. Keep hitting it until the bubble pops, then finish it before the bubble comes back.',
+  },
+  mortar: {
+    id: 'mortar', name: 'Mortar Pod', short: 'Mortar', size: 1.05, hull: 1.2, tint: '#d98a3a',
+    hp: 800, speed: 12, laser: 0, fireEvery: 4.5, mortar: 26, range: 520, cone: 0.24,
+    intro: 'A Mortar Pod! It lobs slow fire bombs from far away. Watch them in the sky and keep moving, then get close: it is slow.',
+  },
+  ghost: {
+    id: 'ghost', name: 'Ghost Pod', short: 'Ghost', size: 1, hull: 0.95, tint: '#5a4a80',
+    hp: 650, speed: 20, laser: 9, fireEvery: 2.2, range: 300, cone: 0.2, cloak: true,
+    intro: 'A Ghost Pod! It is almost invisible and it is not on your radar. Look for its scanner light on the ground.',
+  },
+  splitter: {
+    id: 'splitter', name: 'Splitter Pod', short: 'Splitter', size: 1.25, hull: 1.25, tint: '#d8c23a',
+    hp: 1000, speed: 15, laser: 8, fireEvery: 2.6, range: 300, cone: 0.2, split: { type: 'sprinter', n: 2 },
+    intro: 'A Splitter Pod! Be ready: when you destroy it, two Sprinter Pods climb out of the wreck.',
+  },
+  // ---- boss pods: big, named, with a special attack. Any weapon can hurt them. ----
+  stormking: {
+    id: 'stormking', name: 'Boss Pod: Storm King', short: 'Storm King', size: 1.7, hull: 1.5, tint: '#39507a', boss: '#7db8ff', radar: 4,
+    hp: 3000, speed: 16, laser: 5, fireEvery: 3.2, minigun: 5, range: 520, cone: 0.28, lose: 12,
+    storm: 30, stormEvery: 7,    // calls lightning down on you: a ring on the ground warns you first
+    intro: 'A Boss Pod! That is the Storm King. It calls lightning down on you. When you see the blue ring on the ground, MOVE!',
+  },
+  overlord: {
+    id: 'overlord', name: 'Boss Pod: Overlord', short: 'Overlord', size: 2.2, hull: 1.9, tint: '#5a1f2a', boss: '#ff5a3a', radar: 4,
+    hp: 3600, speed: 15, laser: 4, fireEvery: 3.2, minigun: 6, big: 22, bigEvery: 9, stomp: 45, range: 620, cone: 0.3, lose: 14,
+    shield: 450, shieldWait: 7,
+    summon: { type: 'sprinter', every: 30, max: 2 },
+    intro: 'The Overlord! The biggest Boss Pod of all. It has a shield, it stomps, and it calls Sprinter Pods to help it. Pop the shield first!',
+  },
+});
+
 // Invasion mode waves: numbers are kaiju categories, 'T' is an attacker tripod.
 export const INVASION_WAVES = [
   ['T'],

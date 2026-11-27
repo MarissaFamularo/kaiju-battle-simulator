@@ -103,7 +103,7 @@ export class Game {
     this.cfg = cfg;
     this.mode = mode;
     this.time = 0;
-    this.stats = { kills: 0, tripods: 0, weakHits: 0, damage: 0, start: 0, bonks: 0 };
+    this.stats = { kills: 0, tripods: 0, byType: {}, weakHits: 0, damage: 0, start: 0, bonks: 0 };
     this.cooldowns = { drones: 0, apache: 12, gunship: 25, jets: 35, missiles: 0 };
     this.waveIdx = -1;
     this.waveState = 'pre';
@@ -248,13 +248,13 @@ export class Game {
   }
 
   // ---- tripods (chapter 2): lightning keeps hitting one spot ahead of you, then a tripod climbs out
-  queueTripod(type = 'attacker') {
+  queueTripod(type = 'attacker', near = false) {
     const ref = this.pilot && !this.pilot.dead ? this.pilot.pos : (this.mech ? this.mech.pos : new THREE.Vector3());
     const B = this.city.bound - 120;
     let x = 0, z = 0;
     for (let tries = 0; tries < 12; tries++) {
       const a = this.view.yaw + (Math.random() - 0.5) * (0.9 + tries * 0.4);
-      const d = this.city.hasTerrain ? 650 + Math.random() * 450 : 330 + Math.random() * 200; // far off on the big map
+      const d = this.city.hasTerrain && !near ? 650 + Math.random() * 450 : 330 + Math.random() * 200; // far off on the big map
       x = THREE.MathUtils.clamp(ref.x + Math.sin(a) * d, -B, B);
       z = THREE.MathUtils.clamp(ref.z + Math.cos(a) * d, this.city.waterEdge + 120, B);
       const farFromMe = Math.hypot(x - ref.x, z - ref.z) > 220;
@@ -262,7 +262,7 @@ export class Game {
       if (farFromMe && farFromPlant) break;
     }
     // the Uber Pod gets the full 20 lightning strikes
-    this.warnings.push({ tripod: true, type, t: type === 'emperor' ? 15 : type === 'uber' ? 13 : 8.5, quick: type === 'uber' || type === 'emperor', strikeT: 0.2, strikes: 0, x, z, zone: new THREE.Vector3(x, 0, z), radius: 90 });
+    this.warnings.push({ tripod: true, type, t: type === 'emperor' || TRIPODS[type].boss ? 15 : type === 'uber' ? 13 : 8.5, quick: type === 'uber' || type === 'emperor' || !!TRIPODS[type].boss, strikeT: 0.2, strikes: 0, x, z, zone: new THREE.Vector3(x, 0, z), radius: 90 });
     audio.play('alarm');
     this.hud.alert('LIGHTNING STORM AHEAD', 5, true);
     this.nav.say('tripodWarn', 'Lightning keeps hitting the same spot ahead of you! Something is coming up out of the ground. Hide behind a building so its scanner light cannot find you!', 3, 0);
@@ -276,6 +276,7 @@ export class Game {
     if (w.type === 'harvester') this.nav.say('harvRise', `That is a Harvester! It is going after the survivor camps and the animals. Catch it before it gets there, and watch out for its legs: it stomps!`, 3, 0);
     else if (w.type === 'emperor') this.nav.say('emperorRise', `The Emperor Pod! It is taller than every other tripod. It has the Uber Pod's lasers AND the Harvester's cage, and it stomps. Only your Energy Sword or Laser Blaster can hurt it!`, 3, 0);
     else if (w.type === 'uber') this.nav.say('uberRise', `An Uber Pod! Look at the size of it. Stacked lasers and long legs. Remember: only your Energy Sword or Laser Blaster can hurt it!`, 3, 0);
+    else if (TRIPODS[w.type].intro) this.nav.say('rise_' + w.type, TRIPODS[w.type].intro, 3, 0);
     else this.nav.say('tripodRise', `A tripod! Legs first, then it pushes itself up. That is ${t.name}. It can only attack if its scanner light finds you. Its weak spot is the glowing core underneath.`, 3, 0);
     return t;
   }
@@ -283,6 +284,7 @@ export class Game {
   onTripodKilled(t) {
     this.stats.kills++;
     this.stats.tripods++;
+    this.stats.byType[t.type] = (this.stats.byType[t.type] || 0) + 1;
     this.fieldRepair();
     this.hud.alert(`${t.name.toUpperCase()} DESTROYED`, 3);
     this.nav.say('tripodKill', [`${t.name} is down! Great work, pilot!`, 'Tripod destroyed! Its lights are out for good.', `Timber! ${t.name} is scrap metal now.`][Math.floor(Math.random() * 3)], 3, 0);
@@ -357,7 +359,7 @@ export class Game {
     // spawn menu: B opens it, then a number picks (the numbers do not call air support while it is open)
     if (input.pressed('KeyB')) this.spawnMenu.toggle();
     if (this.spawnMenu.open) {
-      for (let i = 1; i <= 9; i++) if (input.pressed(`Digit${i}`)) { this.spawnMenu.pick(i - 1); break; }
+      for (let i = 1; i <= 9; i++) if (input.pressed(`Digit${i}`)) { this.spawnMenu.pickKey(i - 1); break; }
       return;
     }
     if (input.pressed('KeyQ') && this.cooldowns.drones <= 0) {
@@ -520,6 +522,7 @@ export class Game {
     this.stats.start = this.time;
     if (this.app.settings.music) audio.startMusic();
     // scout Jaegers help out everywhere except the story modes
+    if (this.mission && this.mission.scouts) this.scouts.deploy(this.mission.scouts, this.mission.scoutPower || 1); // some missions bring a squadron
     if (!['campaign', 'mission'].includes(this.mode)) {
       this.scouts.deploy(this.mode === 'freeplay' ? 3 : 2);
       setTimeout(() => this.nav.say('scouts', 'Scout Jaegers are patrolling with you. They are the small colored arrows on your radar, and they shoot at any bad guy they find.', 2, 0), 38000);
@@ -591,7 +594,7 @@ export class Game {
       if (busy < 3) {
         fp.count++;
         fp.t = 40 + Math.random() * 30;
-        if (Math.random() < 0.5) this.queueTripod(fp.count > 9 && Math.random() < 0.15 && !this.kaijus.some((k) => k.type === 'emperor' && !k.dead) ? 'emperor' : fp.count > 6 && Math.random() < 0.25 ? 'uber' : 'attacker'); // an Uber Pod now and then, later on; the Emperor Pod is rare
+        if (Math.random() < 0.5) this.queueTripod(fp.count > 9 && Math.random() < 0.15 && !this.kaijus.some((k) => k.type === 'emperor' && !k.dead) ? 'emperor' : fp.count > 6 && Math.random() < 0.25 ? 'uber' : fp.count > 2 && Math.random() < 0.45 ? ['sprinter', 'shield', 'mortar', 'ghost', 'splitter'][Math.floor(Math.random() * 5)] : 'attacker'); // an Uber Pod now and then, later on; the Emperor Pod is rare
         else this.queueKaiju(Math.min(5, 1 + Math.floor(fp.count / 3) + (Math.random() < 0.3 ? 1 : 0)));
         audio.intensity = Math.min(1, 0.4 + fp.count * 0.04);
       } else fp.t = 10;

@@ -76,7 +76,8 @@ Patrick's full design is in `docs/chapter-2-design.md`. Built so far:
 - **Emperor Pod.** Patrick's boss: an Uber Pod and a Harvester in one, twice as tall as an Attacker, with gold armor and a crown. It shoots, harvests and stomps. Sword and Laser Blaster only. `Y` summons one in Free Smash.
 - **Scout Jaegers.** Small friendly Jaegers patrol near you and shoot at any kaiju or tripod they find (not in Campaign or Mission). Code: `src/entities/scouts.js`.
 - **Spawn menu and far spawns.** `B` (SPAWN on iPad) summons any enemy. On the huge map enemies come up far away and are pinned to the radar rim so you can hunt them.
-- **CAMPAIGN:** eight missions on the huge map, unlocked one at a time and saved in the browser: First Contact, Supply Run, Rescue, The Harvester, Hold the Bunker, Monsters of the Crater, The Uber Pod, The Emperor Pod. The mission list is in `src/campaign.js`.
+- **Part 2 tripods.** Sprinter, Shield, Mortar, Ghost and Splitter Pods, plus two Boss Pods (Storm King, Overlord). Specs are in `TRIPODS` in `src/config.js`; all are in the spawn menu.
+- **CAMPAIGN:** fifteen missions on the huge map, unlocked one at a time and saved in the browser: First Contact, Supply Run, Rescue, The Harvester, Hold the Bunker, Monsters of the Crater, The Uber Pod, The Emperor Pod, then part 2: Scout Squadron, Catch the Sprinters, Break the Shield, Fire From the Sky, Ghost Hunt, Double Trouble, The Overlord. The mission list is in `src/campaign.js`.
 
 - **The opening story.** The first time you launch a chapter 2 mode (Campaign, Free Play or Invasion) you see: the Earth; an unknown ship hitting Station Aegis; the Jaeger ejecting just before the hit and falling to the planet; a fight with a kaiju in the ruined city; twenty lightning strikes on one spot; and a tripod rising. Then the game starts with your Jaeger already on the ground. Space or a tap skips it. Later launches show a short drop instead. Code: `src/scenes/invasionIntro.js`.
 

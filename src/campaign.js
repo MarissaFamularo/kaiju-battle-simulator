@@ -14,6 +14,13 @@
 
 const STORE = 'kbs.campaign.v1';
 export function campaignProgress() {
+  try {
+    // Part 2 was added after Patrick had already finished mission 8: open mission 9 for anyone who had reached the old end
+    if (!localStorage.getItem('kbs.campaign.part2')) {
+      localStorage.setItem('kbs.campaign.part2', '1');
+      if ((parseInt(localStorage.getItem(STORE) || '0', 10) || 0) >= 7) localStorage.setItem(STORE, '8');
+    }
+  } catch (e) { /* storage blocked */ }
   try { return Math.max(0, Math.min(MISSIONS.length - 1, parseInt(localStorage.getItem(STORE) || '0', 10) || 0)); } catch (e) { return 0; }
 }
 export function unlockMission(i) {
@@ -23,6 +30,8 @@ export function unlockMission(i) {
 const living = (g, pred = () => true) => g.kaijus.filter((k) => !k.dead && pred(k));
 const noneComing = (g) => !g.warnings.length && !living(g).length;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+const beaten = (g, type) => g.stats.byType[type] || 0;                     // how many of this tripod type are destroyed
+const around = (g, type) => living(g, (k) => k.type === type).length + g.warnings.filter((w) => w.type === type).length;
 
 export const MISSIONS = [
   {
@@ -130,7 +139,85 @@ export const MISSIONS = [
     goal: (g) => `Destroy the Emperor Pod (it has taken ${g.camps.harvested}/10)`,
     done: (g, s) => s.sent && g.kaijus.some((k) => k.type === 'emperor' && k.dead),
     failed: (g) => (g.camps.harvested >= 10 ? 'The Emperor Pod filled its cage with survivors.' : null),
-    win: 'You destroyed the Emperor Pod! The invasion is broken, and the survivors can come out. You did it, pilot!',
+    win: 'You destroyed the Emperor Pod! But the scouts are reporting new kinds of tripods, and something they call Boss Pods.',
     needsSpecial: true, needsLaser: true,
+  },
+  // ------------------------------------------------------------------ PART 2: THE BOSS PODS
+  // Patrick finished part 1 on 2026-11-27 and asked for new missions with five new tripods and boss
+  // pods, starting with a mission where the other mechs destroy tripods until the boss pods come.
+  {
+    title: 'Scout Squadron',
+    brief: 'Part 2! Four Scout Jaegers are fighting tripods in the ruined city. Help them destroy 4 tripods. But be ready: the scouts say a Boss Pod is on its way.',
+    scouts: 4, scoutPower: 3,   // a veteran squadron, so you really see them win
+    start(g, s) { s.sent = 0; s.boss = false; g.nav.say('m9', 'Your Scout Squadron is here: Comet, Falcon, Nova and Blaze. Watch them work, and help them out!', 3, 0); },
+    tick(g, s) {
+      if (!s.boss && s.sent < 4 && around(g, 'attacker') < 2 && g.ms.t > 7) { s.sent++; g.queueTripod('attacker', true); }
+      if (!s.boss && beaten(g, 'attacker') >= 4) {
+        s.boss = true;
+        g.hud.alert('THE BOSS POD IS COMING!', 5, true);
+        g.queueTripod('stormking', true);
+      }
+    },
+    goal: (g, s) => (s.boss ? 'Destroy the Boss Pod: Storm King' : `Help the scouts destroy 4 tripods (${Math.min(4, beaten(g, 'attacker'))}/4)`),
+    done: (g, s) => s.boss && beaten(g, 'stormking') >= 1,
+    failed: () => null,
+    win: 'The Storm King is down! Your squadron is cheering. But that was only the first Boss Pod.',
+  },
+  {
+    title: 'Catch the Sprinters',
+    brief: 'A new tripod: the Sprinter Pod. Small, fast and hard to catch. Three of them are racing around. Destroy all 3.',
+    start(g, s) { s.sent = 0; },
+    tick(g, s) { if (s.sent < 3 && around(g, 'sprinter') < 2) { s.sent++; g.queueTripod('sprinter', s.sent === 1); } },
+    goal: (g) => `Destroy 3 Sprinter Pods (${Math.min(3, beaten(g, 'sprinter'))}/3)`,
+    done: (g) => beaten(g, 'sprinter') >= 3,
+    failed: () => null,
+    win: 'All three Sprinters caught! Nothing outruns you.',
+  },
+  {
+    title: 'Break the Shield',
+    brief: 'A new tripod: the Shield Pod. A blue bubble soaks up your shots. Keep hitting until the bubble pops, then finish it before the bubble grows back. Destroy 2.',
+    start(g, s) { s.sent = 1; g.queueTripod('shield', true); },
+    tick(g, s) { if (s.sent < 2 && beaten(g, 'shield') >= 1 && around(g, 'shield') < 1) { s.sent++; g.queueTripod('shield'); } },
+    goal: (g) => `Destroy 2 Shield Pods (${Math.min(2, beaten(g, 'shield'))}/2)`,
+    done: (g) => beaten(g, 'shield') >= 2,
+    failed: () => null,
+    win: 'Two shields popped, two pods scrapped. Great shooting!',
+  },
+  {
+    title: 'Fire From the Sky',
+    brief: 'A new tripod: the Mortar Pod. It stays far away and lobs slow fire bombs in a high arc. Watch the sky, keep moving, and get in close. Destroy 2.',
+    start(g, s) { g.queueTripod('mortar'); g.queueTripod('mortar'); },
+    goal: (g) => `Destroy 2 Mortar Pods (${Math.min(2, beaten(g, 'mortar'))}/2)`,
+    done: (g) => beaten(g, 'mortar') >= 2,
+    failed: () => null,
+    win: 'No more fire bombs! You got in close, just like a pro.',
+  },
+  {
+    title: 'Ghost Hunt',
+    brief: 'A new tripod: the Ghost Pod. It is almost invisible and it hides from your radar. Look for its scanner light moving on the ground. Find and destroy 2.',
+    start(g, s) { g.queueTripod('ghost', true); g.queueTripod('ghost', true); },
+    goal: (g) => `Find and destroy 2 Ghost Pods (${Math.min(2, beaten(g, 'ghost'))}/2)`,
+    done: (g) => beaten(g, 'ghost') >= 2,
+    failed: () => null,
+    win: 'You found the ghosts! They cannot hide from you.',
+  },
+  {
+    title: 'Double Trouble',
+    brief: 'A new tripod: the Splitter Pod. When you destroy it, two Sprinter Pods climb out of the wreck! Destroy the Splitter and both Sprinters.',
+    start(g, s) { g.queueTripod('splitter', true); },
+    goal: (g) => (beaten(g, 'splitter') ? `Destroy the Sprinters that came out (${Math.min(2, beaten(g, 'sprinter'))}/2)` : 'Destroy the Splitter Pod'),
+    done: (g) => beaten(g, 'splitter') >= 1 && beaten(g, 'sprinter') >= 2,
+    failed: () => null,
+    win: 'One pod, then two more, and you beat them all!',
+  },
+  {
+    title: 'The Overlord',
+    brief: 'The last and biggest Boss Pod: the Overlord. It has a shield, it stomps, it fires a big laser, and it calls Sprinter Pods to help. Your Scout Squadron is coming with you. Pop the shield and bring it down!',
+    scouts: 3,
+    start(g, s) { g.queueTripod('overlord', true); },
+    goal: () => 'Destroy the Boss Pod: Overlord',
+    done: (g) => beaten(g, 'overlord') >= 1,
+    failed: () => null,
+    win: 'THE OVERLORD IS DESTROYED! Every Boss Pod is beaten. The Earth is safe, and you are the greatest Jaeger pilot there is!',
   },
 ];
