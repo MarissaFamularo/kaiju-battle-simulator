@@ -80,7 +80,7 @@ export class SpawnMenu {
     this.close();
     if (!c) return;
     const busy = g.kaijus.filter((k) => !k.dead).length + g.warnings.length;
-    if (busy >= MAX_ENEMIES) { g.hud.alert('TOO MANY BAD GUYS! BEAT SOME FIRST', 2.5); return; }
+    if (busy >= (g.lowPower ? 6 : MAX_ENEMIES)) { g.hud.alert('TOO MANY BAD GUYS! BEAT SOME FIRST', 2.5); return; }
     if (/^k\d$/.test(c.id)) g.queueKaiju(+c.id[1]);
     else if (c.id === 'ship') g.queueShip(['attacker', ['sprinter', 'shield', 'mortar', 'ghost', 'splitter', 'sniper', 'repair', 'flame', 'thunder'][Math.floor(Math.random() * 9)]]);
     else if (c.id === 'mothership') g.queueShip(['attacker', 'flame', 'repair', 'thunder', 'titan'], 'mothership');

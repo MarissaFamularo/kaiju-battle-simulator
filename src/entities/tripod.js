@@ -295,6 +295,11 @@ export class Tripod {
   // ------------------------------------------------------------ update
   update(dt) {
     const g = this.game;
+    // an old wreck just lies there: no more work for it each frame, and no shadow to draw
+    if (this.landed && this.deadT > 12) {
+      if (!this.resting) { this.resting = true; this.root.traverse((o) => { o.castShadow = false; }); this.model.beam.visible = false; this.model.spot.visible = false; }
+      return;
+    }
     this.stateT += dt;
     this.fireCd -= dt; this.capsuleCd -= dt; this.stepCd -= dt; this.bigCd -= dt; this.stompCd -= dt;
     this.hitFlash = Math.max(0, this.hitFlash - dt * 4);

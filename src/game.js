@@ -31,6 +31,7 @@ export class Game {
     this.nav = app.nav;
     this.hud = app.hud;
     this.spawnMenu = new SpawnMenu(this);
+    this.lowPower = navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches; // touch devices get lighter settings
     this.input = app.input;
     this.camera = new THREE.PerspectiveCamera(58, 1, 1, 9000);
     this.view = { yaw: Math.PI, pitch: -0.05 };
@@ -152,7 +153,7 @@ export class Game {
     const sky = this.sky = new THREE.Group();
     const noFog = { fog: false, depthWrite: false };
     // far-off ships: points of light
-    const n = 600, pos = new Float32Array(n * 3);
+    const n = this.lowPower ? 300 : 600, pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       const a = Math.random() * 6.28, r = 500 + Math.random() * 6000;
       pos.set([Math.cos(a) * r, 2400 + Math.random() * 2200, Math.sin(a) * r], i * 3);
@@ -161,7 +162,7 @@ export class Game {
     const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ff7a4a', size: 3, sizeAttenuation: false, transparent: true, opacity: 0.9, ...noFog }));
     pts.frustumCulled = false;
     // nearer ships: you can see their shape and their engines
-    const SH = 170, hullGeo = new THREE.SphereGeometry(1, 10, 6); hullGeo.scale(1, 0.28, 1.6);
+    const SH = this.lowPower ? 90 : 170, hullGeo = new THREE.SphereGeometry(1, 10, 6); hullGeo.scale(1, 0.28, 1.6);
     const hulls = new THREE.InstancedMesh(hullGeo, new THREE.MeshBasicMaterial({ color: '#9aa2b6', ...noFog }), SH);
     const engines = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), new THREE.MeshBasicMaterial({ color: '#ff5a2a', ...noFog }), SH * 2);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), e = new THREE.Euler();
@@ -413,7 +414,7 @@ export class Game {
       for (const k of this.kaijus) k.update(dt);
       { // fallen tripods stay on the map; keep the newest 14 wrecks
         const wrecks = this.kaijus.filter((k) => k.isTripod && k.dead && k.landed);
-        if (wrecks.length > 14) wrecks[0].removeMe = true;
+        if (wrecks.length > (this.lowPower ? 5 : 14)) wrecks[0].removeMe = true; // fewer on iPads and phones, to save memory
       }
       for (let i = this.kaijus.length - 1; i >= 0; i--) if (this.kaijus[i].removeMe) { this.kaijus[i].remove(); this.kaijus.splice(i, 1); }
       this.projectiles.update(dt);
