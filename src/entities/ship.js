@@ -9,7 +9,7 @@ import { Tripod } from './tripod.js';
 const NAMES = ['Viper', 'Talon', 'Raven', 'Scythe', 'Mantis', 'Hornet', 'Wraith', 'Cobra'];
 let nameIdx = 0;
 export const SHIPS = {
-  ship: { id: 'ship', name: 'Alien Dropship', short: 'Dropship', scale: 1, hp: 850, alt: 190, dropEvery: 9, laser: 5, fireEvery: 3.4 },
+  ship: { id: 'ship', name: 'Alien Dropship', short: 'Dropship', scale: 1, hp: 850, alt: 190, dropEvery: 7, laser: 5, fireEvery: 3.4, leaves: true },   // drops its tripods, then flies away
   mothership: { id: 'mothership', name: 'The Mothership', short: 'Mothership', scale: 2.6, hp: 4200, alt: 250, dropEvery: 22, laser: 6, fireEvery: 2.4, boss: true },
 };
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
@@ -87,6 +87,16 @@ export class AlienShip {
     this.model.mats.weak.emissiveIntensity = this.dead ? 0.2 : 3 + Math.sin(g.time * 6) * 1.5;
     if (this.dead) { this.updateDead(dt); this.place(); return; }
     const hoverY = g.city.groundAt(this.drop.x, this.drop.z) + sp.alt;
+    if (this.state === 'leave') {
+      // job done: climb away back to the fleet
+      this.vy = Math.min(260, this.vy + dt * 60);
+      this.pos.y += this.vy * dt;
+      this.pos.addScaledVector(_a.set(Math.sin(this.yaw), 0, Math.cos(this.yaw)), (60 + this.vy) * dt);
+      if (Math.random() < 0.5) g.fx.glow(_b.copy(this.pos).setY(this.pos.y - 6), RED, 36, 0.2);
+      if (this.pos.y > 1500) { this.dead = true; this.gone = true; this.removeMe = true; g.stats.shipsGone++; }
+      this.place();
+      return;
+    }
     if (this.state === 'arrive') {
       const k = Math.min(1, this.stateT / 9), e = 1 - (1 - k) ** 2;
       if (!this.from) this.from = this.pos.clone();
@@ -112,6 +122,13 @@ export class AlienShip {
         audio.play('uiBig', this.pos, 1);
         g.hud.alert(`${this.name.toUpperCase()} DROPPED A ${TRIPODS[type].short.toUpperCase()}!`, 3, true);
         g.nav.say('shipDrop', `The ship dropped a ${TRIPODS[type].name}! It is already awake. Shoot the ship down before it drops more!`, 2, 18);
+      }
+      if (sp.leaves && !this.cargo.length && this.dropCd < sp.dropEvery - 3) {
+        this.state = 'leave'; this.stateT = 0; this.vy = 0;
+        g.hud.alert(`${this.name.toUpperCase()} IS LEAVING`, 2.5);
+        g.nav.say('shipLeave', 'The ship dropped everything it had, and now it is flying away. Get the tripods!', 2, 15);
+        this.place();
+        return;
       }
       // a light laser of its own
       this.fireCd -= dt;
@@ -143,6 +160,7 @@ export class AlienShip {
     this.hp = 0; this.dead = true; this.state = 'dead'; this.stateT = 0; this.tilt = 0;
     g.fx.explosion(this.pos, 1.6 * this.spec.scale);
     audio.play('explosion', this.pos, 1.2);
+    g.stats.shipsGone++;
     g.onTripodKilled(this);
   }
 

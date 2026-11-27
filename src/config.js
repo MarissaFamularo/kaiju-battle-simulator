@@ -231,6 +231,35 @@ Object.assign(TRIPODS, {
     intro: 'A Boss Pod! The Boss Splitter splits into two Splitter Pods, and each of those splits into two Sprinters. That is seven pods in one!' },
 });
 
+// Part 3 tripods (Patrick, 2026-11-27: "and new tripods"). They come from the fleet. All Claude's calls.
+Object.assign(TRIPODS, {
+  titan: {
+    id: 'titan', name: 'Titan Pod', short: 'Titan', size: 1.9, hull: 1.8, tint: '#6a6f7c', radar: 3,
+    hp: 3000, speed: 9, laser: 6, fireEvery: 3, stomp: 55, range: 340, cone: 0.24,
+    intro: 'A Titan Pod! Huge, slow, and covered in armor. It takes a LOT of hits, and it stomps. Do not stand under it!',
+  },
+  sniper: {
+    id: 'sniper', name: 'Sniper Pod', short: 'Sniper', size: 1.15, hull: 0.9, tint: '#2f8f8a',
+    hp: 600, speed: 13, laser: 0, fireEvery: 99, big: 26, bigEvery: 5, bigSpeed: 760, bigRange: 900, range: 800, cone: 0.12, far: 900, lose: 9,
+    intro: 'A Sniper Pod! It sees very far with a thin light, and fires one strong, fast shot. Stay behind buildings until you are close.',
+  },
+  repair: {
+    id: 'repair', name: 'Repair Pod', short: 'Repair', size: 0.95, hull: 1, tint: '#3fb86a',
+    hp: 700, speed: 18, laser: 4, fireEvery: 3, range: 280, cone: 0.2, heal: 45, healRange: 280,
+    intro: 'A Repair Pod! It fixes the other tripods near it with a green beam. Destroy the Repair Pod FIRST!',
+  },
+  flame: {
+    id: 'flame', name: 'Flame Pod', short: 'Flame', size: 1, hull: 1.05, tint: '#c8452a',
+    hp: 850, speed: 22, laser: 0, fireEvery: 99, flame: 5, range: 280, cone: 0.24,
+    intro: 'A Flame Pod! It runs right up to you and breathes fire. Keep your distance and shoot it from far away.',
+  },
+  thunder: {
+    id: 'thunder', name: 'Thunder Pod', short: 'Thunder', size: 1.1, hull: 1, tint: '#4a5fc8',
+    hp: 800, speed: 15, laser: 6, fireEvery: 3.2, storm: 18, stormEvery: 6, range: 380, cone: 0.22,
+    intro: 'A Thunder Pod! It calls lightning down on you, like a little Storm King. Get out of the blue ring!',
+  },
+});
+
 // Invasion mode waves: numbers are kaiju categories, 'T' is an attacker tripod.
 export const INVASION_WAVES = [
   ['T'],

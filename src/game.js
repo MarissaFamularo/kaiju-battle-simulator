@@ -55,6 +55,7 @@ export class Game {
     this.scouts = new Scouts(this); // friendly scout Jaegers
     this.camps = kind === 'wasteland' ? new Camps(this) : null; // survivor camps and bunkers
     this.kaijus = [];
+    this.sky = null;
     this.warnings = [];
     this.mech = null;
     this.pilot = null;
@@ -106,7 +107,7 @@ export class Game {
     this.cfg = cfg;
     this.mode = mode;
     this.time = 0;
-    this.stats = { kills: 0, tripods: 0, byType: {}, weakHits: 0, damage: 0, start: 0, bonks: 0 };
+    this.stats = { kills: 0, tripods: 0, shipsGone: 0, byType: {}, weakHits: 0, damage: 0, start: 0, bonks: 0 };
     this.cooldowns = { drones: 0, apache: 12, gunship: 25, jets: 35, missiles: 0 };
     this.waveIdx = -1;
     this.waveState = 'pre';
@@ -130,7 +131,7 @@ export class Game {
     this.attacked = false;
     audio.intensity = 0.2;
     this.clouds();
-    if (this.mission && this.mission.part === 3) this.skyFleet();
+    if ((this.mission && this.mission.part === 3) || mode === 'freeplay') this.skyFleet();
     if (grounded) this.startGrounded();
   }
 
@@ -144,17 +145,56 @@ export class Game {
     this.beginPlay();
   }
 
-  // Part 3: hundreds of ships in orbit, seen from the ground as lights high in the sky
+  // Part 3 sky (Patrick: "I want to see all the ships from Earth and the destroyed planet"):
+  // the fleet in orbit as real ship shapes plus far-off lights, and the broken enemy planet.
+  // It all rides along with the camera, so it always looks far away.
   skyFleet() {
-    const n = 500, pos = new Float32Array(n * 3);
+    const sky = this.sky = new THREE.Group();
+    const noFog = { fog: false, depthWrite: false };
+    // far-off ships: points of light
+    const n = 600, pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
-      const a = Math.random() * 6.28, r = 600 + Math.random() * 7000;
-      pos.set([Math.cos(a) * r, 2600 + Math.random() * 2600, Math.sin(a) * r], i * 3);
+      const a = Math.random() * 6.28, r = 500 + Math.random() * 6000;
+      pos.set([Math.cos(a) * r, 2400 + Math.random() * 2200, Math.sin(a) * r], i * 3);
     }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ff6a3a', size: 3.2, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.9, depthWrite: false }));
+    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ff7a4a', size: 3, sizeAttenuation: false, transparent: true, opacity: 0.9, ...noFog }));
     pts.frustumCulled = false;
-    this.scene.add(pts);
+    // nearer ships: you can see their shape and their engines
+    const SH = 170, hullGeo = new THREE.SphereGeometry(1, 10, 6); hullGeo.scale(1, 0.28, 1.6);
+    const hulls = new THREE.InstancedMesh(hullGeo, new THREE.MeshBasicMaterial({ color: '#9aa2b6', ...noFog }), SH);
+    const engines = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), new THREE.MeshBasicMaterial({ color: '#ff5a2a', ...noFog }), SH * 2);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), e = new THREE.Euler();
+    for (let i = 0; i < SH; i++) {
+      const a = Math.random() * 6.28, r = 700 + Math.random() * 4600, size = 26 + Math.random() * 60;
+      p.set(Math.cos(a) * r, 1300 + Math.random() * 1700, Math.sin(a) * r);
+      const yaw = -a + (Math.random() - 0.5) * 0.5; // they circle the sky
+      q.setFromEuler(e.set(0, yaw, 0));
+      hulls.setMatrixAt(i, m.compose(p, q, sc.setScalar(size)));
+      for (const sgn of [-1, 1]) {
+        const ep = new THREE.Vector3(sgn * 0.5 * size, 0, -1.5 * size).applyQuaternion(q).add(p);
+        engines.setMatrixAt(i * 2 + (sgn > 0 ? 1 : 0), m.compose(ep, q, sc.setScalar(size * 0.16)));
+      }
+    }
+    hulls.frustumCulled = engines.frustumCulled = false;
+    const fleet = this.skyShips = new THREE.Group(); fleet.add(pts, hulls, engines);
+    sky.add(fleet);
+    // what is left of the enemy planet: a glowing core and a cloud of broken pieces
+    const wreck = new THREE.Group(); wreck.position.set(-3600, 3900, -4300);
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(330, 1), new THREE.MeshBasicMaterial({ color: '#ff5a2a', ...noFog })); wreck.add(core);
+    const halo = new THREE.Mesh(new THREE.SphereGeometry(620, 20, 14), new THREE.MeshBasicMaterial({ color: '#ff8a4a', transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, ...noFog })); wreck.add(halo);
+    const CH = 150, chunks = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshBasicMaterial({ color: '#8a2c3c', ...noFog }), CH);
+    for (let i = 0; i < CH; i++) {
+      p.randomDirection().multiplyScalar(380 + Math.random() ** 0.6 * 1100); p.y *= 0.55;
+      q.setFromEuler(e.set(Math.random() * 6, Math.random() * 6, 0));
+      chunks.setMatrixAt(i, m.compose(p, q, sc.setScalar(25 + Math.random() * 110)));
+    }
+    chunks.frustumCulled = false; wreck.add(chunks);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(900, 1500, 48), new THREE.MeshBasicMaterial({ color: '#c96a4a', transparent: true, opacity: 0.22, side: THREE.DoubleSide, ...noFog }));
+    ring.rotation.x = 1.2; ring.rotation.y = 0.4; wreck.add(ring);
+    this.skyWreck = wreck;
+    sky.add(wreck);
+    this.scene.add(sky);
   }
 
   // An alien ship comes down out of the sky and hovers near you, dropping tripods that are already awake.
@@ -393,6 +433,11 @@ export class Game {
     this.city.update(dt, this.time);
     this.fx.update(dt);
     this.updateCamera(rawDt);
+    if (this.sky) { // the fleet and the broken planet stay far away, and the ships circle slowly
+      this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
+      this.skyShips.rotation.y += rawDt * 0.012;
+      this.skyWreck.rotation.y += rawDt * 0.01;
+    }
     if (playing || this.state === 'over') this.computeAim();
     if (playing || this.state === 'over') this.hud.update(rawDt, this);
     audio.setListener(this.camera.position);
@@ -638,7 +683,7 @@ export class Game {
       if (busy < 3) {
         fp.count++;
         fp.t = 40 + Math.random() * 30;
-        if (Math.random() < 0.5) this.queueTripod(fp.count > 9 && Math.random() < 0.15 && !this.kaijus.some((k) => k.type === 'emperor' && !k.dead) ? 'emperor' : fp.count > 6 && Math.random() < 0.25 ? 'uber' : fp.count > 2 && Math.random() < 0.45 ? ['sprinter', 'shield', 'mortar', 'ghost', 'splitter'][Math.floor(Math.random() * 5)] : 'attacker'); // an Uber Pod now and then, later on; the Emperor Pod is rare
+        if (Math.random() < 0.5) this.queueTripod(fp.count > 9 && Math.random() < 0.15 && !this.kaijus.some((k) => k.type === 'emperor' && !k.dead) ? 'emperor' : fp.count > 6 && Math.random() < 0.25 ? 'uber' : fp.count > 2 && Math.random() < 0.5 ? ['sprinter', 'shield', 'mortar', 'ghost', 'splitter', 'titan', 'sniper', 'repair', 'flame', 'thunder'][Math.floor(Math.random() * 10)] : 'attacker'); // an Uber Pod now and then, later on; the Emperor Pod is rare
         else this.queueKaiju(Math.min(5, 1 + Math.floor(fp.count / 3) + (Math.random() < 0.3 ? 1 : 0)));
         audio.intensity = Math.min(1, 0.4 + fp.count * 0.04);
       } else fp.t = 10;

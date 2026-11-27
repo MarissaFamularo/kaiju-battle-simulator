@@ -249,20 +249,20 @@ export const MISSIONS = [
   {
     title: 'Years Later',
     part: 3,
-    brief: 'Part 3! The fleet took years to reach the Earth. In that time humans became a Type Three civilization and invented weapons from the future: every weapon can hurt every tripod now, and there are three new ones in the hangar. The ships are in orbit. The first ones are coming down. Shoot down 2 ships, and every tripod they drop.',
+    brief: 'Part 3! The fleet took years to reach the Earth. In that time humans became a Type Three civilization and invented weapons from the future: every weapon can hurt every tripod now, and there are three new ones in the hangar. The ships are in orbit. The first ones are coming down. Each ship drops its tripods and flies away. Shoot it down before it finishes if you can, and destroy every tripod it drops.',
     start(g, s) { s.sent = 1; g.queueShip(['attacker', 'attacker']); },
-    tick(g, s) { if (s.sent < 2 && beaten(g, 'ship') >= 1) { s.sent++; g.queueShip(['sprinter', 'shield']); } },
-    goal: (g) => (beaten(g, 'ship') >= 2 ? 'Destroy the tripods they dropped' : `Shoot down 2 alien ships (${Math.min(2, beaten(g, 'ship'))}/2)`),
-    done: (g) => beaten(g, 'ship') >= 2 && noneComing(g),
+    tick(g, s) { if (s.sent < 2 && g.stats.shipsGone >= 1) { s.sent++; g.queueShip(['flame', 'thunder']); } },
+    goal: (g) => (g.stats.shipsGone >= 2 ? 'Destroy the tripods they dropped' : `Stop 2 alien ships and their tripods (ship ${Math.min(2, g.stats.shipsGone + 1)}/2)`),
+    done: (g) => g.stats.shipsGone >= 2 && noneComing(g),
     failed: () => null,
-    win: 'Two ships down! But look up: the sky is full of them.',
+    win: 'Two ships dealt with! But look up: the sky is full of them, and you can see what is left of their planet.',
   },
   {
     title: 'They Are All Awake',
     part: 3, scouts: 3, scoutPower: 2,
-    brief: 'The tripods that were asleep underground have ALL woken up. No more lightning: six of them are already walking around the map. Hunt them down with your Scout Squadron. Destroy all 6.',
+    brief: 'The tripods that were asleep underground have ALL woken up. No more lightning: six of them are already walking around the map, and five are new kinds from the fleet: Sniper, Repair, Flame, Thunder and Titan. Hunt them down with your Scout Squadron. Destroy all 6.',
     start(g, s) {
-      const types = ['attacker', 'attacker', 'sprinter', 'mortar', 'ghost', 'shield'];
+      const types = ['attacker', 'sniper', 'repair', 'flame', 'thunder', 'titan'];
       const B = g.city.bound - 200;
       types.forEach((type, i) => {
         const a = (i / types.length) * 6.28 + Math.random() * 0.6, d = 550 + Math.random() * 500;
@@ -280,27 +280,27 @@ export const MISSIONS = [
   {
     title: 'More and More Ships',
     part: 3, scouts: 2,
-    brief: 'They are sending more and more ships. First one, then two, then three at once. Shoot them all down, and everything they drop.',
+    brief: 'They are sending more and more ships. First one, then two, then three at once. They drop their tripods and leave. Shoot down the ones you can, and destroy everything they drop.',
     start(g, s) { s.wave = 0; s.wait = 0; },
     tick(g, s, dt) {
       if (s.wave >= 3 || !noneComing(g)) return;
       s.wait -= dt;
       if (s.wait > 0) return;
       s.wave++; s.wait = 6;
-      const cargo = [['attacker', 'sprinter'], ['attacker', 'mortar'], ['shield', 'splitter']];
+      const cargo = [['attacker', 'flame'], ['sniper', 'repair'], ['thunder', 'sprinter']];
       for (let i = 0; i < s.wave; i++) g.queueShip(cargo[i]);
       g.hud.alert(`WAVE ${s.wave} OF 3: ${s.wave} SHIP${s.wave > 1 ? 'S' : ''}`, 4, true);
     },
-    goal: (g, s) => `Shoot down every ship: wave ${Math.max(1, s.wave || 1)}/3 (${beaten(g, 'ship')}/6 ships)`,
-    done: (g, s) => s.wave >= 3 && beaten(g, 'ship') >= 6 && noneComing(g),
+    goal: (g, s) => `Wave ${Math.max(1, s.wave || 1)}/3: destroy everything the ships drop (${beaten(g, 'ship')} shot down)`,
+    done: (g, s) => s.wave >= 3 && g.stats.shipsGone >= 6 && noneComing(g),
     failed: () => null,
-    win: 'Six ships shot down! But something huge just moved in front of the moon.',
+    win: 'Three waves beaten! But something huge just moved in front of the moon.',
   },
   {
     title: 'The Mothership',
     part: 3, scouts: 3,   // normal-strength scouts, so the Mothership is yours to shoot down
-    brief: 'The Mothership is coming down. It is the biggest ship in the fleet and it is full of tripods. Aim for the glowing core underneath it. Bring it down, and destroy everything it drops!',
-    start(g, s) { g.queueShip(['attacker', 'sprinter', 'shield', 'mortar', 'splitter', 'stormking'], 'mothership'); s.sent = true; },
+    brief: 'The Mothership is coming down. It is the biggest ship in the fleet and it is full of tripods. This one does NOT leave. Aim for the glowing core underneath it. Bring it down, and destroy everything it drops!',
+    start(g, s) { g.queueShip(['attacker', 'flame', 'repair', 'thunder', 'sniper', 'titan'], 'mothership'); s.sent = true; },
     goal: (g) => (beaten(g, 'mothership') ? 'Destroy everything it dropped' : 'Shoot down the Mothership'),
     done: (g, s) => s.sent && beaten(g, 'mothership') >= 1 && noneComing(g),
     failed: () => null,

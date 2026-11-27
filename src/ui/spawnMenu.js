@@ -14,6 +14,11 @@ const CHOICES = [
   { id: 'mortar', label: 'Mortar Pod' },
   { id: 'ghost', label: 'Ghost Pod' },
   { id: 'splitter', label: 'Splitter Pod' },
+  { id: 'titan', label: 'Titan Pod' },
+  { id: 'sniper', label: 'Sniper Pod' },
+  { id: 'repair', label: 'Repair Pod' },
+  { id: 'flame', label: 'Flame Pod' },
+  { id: 'thunder', label: 'Thunder Pod' },
   { id: 'sprinterBoss', label: 'Boss Pod: Boss Sprinter' },
   { id: 'shieldBoss', label: 'Boss Pod: Boss Shield' },
   { id: 'mortarBoss', label: 'Boss Pod: Boss Mortar' },
@@ -21,7 +26,7 @@ const CHOICES = [
   { id: 'splitterBoss', label: 'Boss Pod: Boss Splitter' },
   { id: 'stormking', label: 'Boss Pod: Storm King' },
   { id: 'overlord', label: 'Boss Pod: Overlord' },
-  { id: 'ship', label: 'Alien Dropship (drops 2 tripods)' },
+  { id: 'ship', label: 'Alien Dropship (drops 2, then leaves)' },
   { id: 'mothership', label: 'The Mothership' },
 ];
 const PER_PAGE = 7;
@@ -77,8 +82,8 @@ export class SpawnMenu {
     const busy = g.kaijus.filter((k) => !k.dead).length + g.warnings.length;
     if (busy >= MAX_ENEMIES) { g.hud.alert('TOO MANY BAD GUYS! BEAT SOME FIRST', 2.5); return; }
     if (/^k\d$/.test(c.id)) g.queueKaiju(+c.id[1]);
-    else if (c.id === 'ship') g.queueShip(['attacker', ['sprinter', 'shield', 'mortar', 'ghost', 'splitter'][Math.floor(Math.random() * 5)]]);
-    else if (c.id === 'mothership') g.queueShip(['attacker', 'sprinter', 'shield', 'mortar', 'splitter'], 'mothership');
+    else if (c.id === 'ship') g.queueShip(['attacker', ['sprinter', 'shield', 'mortar', 'ghost', 'splitter', 'sniper', 'repair', 'flame', 'thunder'][Math.floor(Math.random() * 9)]]);
+    else if (c.id === 'mothership') g.queueShip(['attacker', 'flame', 'repair', 'thunder', 'titan'], 'mothership');
     else g.queueTripod(c.id);
   }
 }

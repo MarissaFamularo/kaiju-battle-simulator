@@ -339,6 +339,16 @@ export class Tripod {
       for (const key of ['hull', 'trim', 'dark']) { const mt = m.mats[key]; mt.transparent = this.fade < 0.98; mt.opacity = this.fade; }
       m.mats.strip.emissiveIntensity = 2.2 * this.fade;
     }
+    if (sp.heal && !this.dead && !this.emerging) {
+      // Repair Pod: fixes the other tripods near it
+      for (const k of g.kaijus) {
+        if (k === this || !k.isTripod || k.isShip || k.dead || k.emerging || k.hp >= k.maxHp) continue;
+        if (Math.hypot(k.pos.x - this.pos.x, k.pos.z - this.pos.z) > sp.healRange) continue;
+        k.hp = Math.min(k.maxHp, k.hp + sp.heal * dt);
+        if (Math.random() < 0.5) g.fx.glow(_c.copy(m.body.position).lerp(k.model.body.position, Math.random()), GREEN, 14, 0.3);
+        if (g.state === 'play') g.nav.say('repairWarn', `The Repair Pod is fixing ${k.name}! Destroy the Repair Pod first!`, 2, 30);
+      }
+    }
     if (this.stormAt) {
       const s = this.stormAt;
       s.t -= dt;
@@ -410,7 +420,7 @@ export class Tripod {
 
   canSee(point) {
     const eye = this.headPos(_a);
-    if (eye.distanceTo(point) > 620) return false;
+    if (eye.distanceTo(point) > (this.spec.far || 620)) return false;
     return !this.game.city.raycast(eye, point) && !this.game.city.terrainBlocks(eye, point);
   }
 
@@ -590,7 +600,7 @@ export class Tripod {
     }
     // keep a firing distance
     const dist = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z);
-    const want = this.spec.mortar ? 380 : this.spec.immune ? 150 : T.kind === 'kaiju' ? 170 : 210;
+    const want = this.spec.mortar ? 380 : this.spec.flame ? 95 : this.spec.far ? 520 : this.spec.immune ? 150 : T.kind === 'kaiju' ? 170 : 210;
     if (dist > want + 50 || !this.los) this.moveToward(tp, this.speed * 1.15, dt, 0, true);
     else if (dist < want - 80 && !this.spec.stomp) this.moveToward(_a.copy(this.pos).multiplyScalar(2).sub(tp), this.speed * 0.8, dt, 0, true);
     else { this.vel.multiplyScalar(Math.max(0, 1 - dt * 3)); this.pos.addScaledVector(this.vel, dt); }
@@ -617,20 +627,34 @@ export class Tripod {
         g.nav.say('summon', `The ${this.spec.short} called for help! A ${TRIPODS[sm.type].name} is climbing out.`, 2, 10);
       }
     }
+    // Flame Pod: breathes fire at anything right in front of it
+    if (this.spec.flame && this.los && dist < 175 && Math.abs(dy) < 0.6) {
+      const from = this.model.muzzle.getWorldPosition(_b);
+      for (let i = 0; i < 3; i++) g.fx.fire(_c.copy(from).lerp(tp, 0.15 + Math.random() * 0.85), 1.3);
+      this.flameT = (this.flameT || 0) - dt;
+      if (this.flameT <= 0) {
+        this.flameT = 0.3;
+        audio.play('plasma', this.pos, 0.35);
+        if (T.kind === 'kaiju') T.ent.takeDamage(this.spec.flame * 3, tp.clone(), null, { source: 'tripod' });
+        else if (T.kind === 'scout') g.scouts.hurt(T.ent, this.spec.flame, this.pos);
+        else T.ent.takeDamage(this.spec.flame, this.pos);
+        if (T.kind === 'mech') g.nav.say('flameWarn', 'You are in the fire! Back away from the Flame Pod!', 2, 12);
+      }
+    }
     // the Emperor Pod also stomps a Jaeger that gets under its legs
     if (this.spec.stomp && T.kind === 'mech' && dist < this.footR * 1.5 && this.stompCd <= 0 && !this.feet.some((f) => f.t >= 0)) this.startStomp(T.ent.pos);
     // laser bursts
     if (this.burst > 0) {
       this.burstT -= dt;
       if (this.burstT <= 0) { this.burstT = this.spec.minigun ? 0.07 : 0.16; this.burst--; this.fireLaser(tp, T); }
-    } else if (this.spec.big && this.bigCd <= 0 && this.los && Math.abs(dy) < 0.4 && dist < 560) {
+    } else if (this.spec.big && this.bigCd <= 0 && this.los && Math.abs(dy) < 0.4 && dist < (this.spec.bigRange || 560)) {
       this.bigCd = this.spec.bigEvery;
       this.fireBig(tp, T);
     } else if (this.spec.mortar && this.fireCd <= 0 && this.los && dist < 620) {
       this.fireCd = this.spec.fireEvery + Math.random();
       const n = this.spec.mortarCount || 1;
       for (let i = 0; i < n; i++) this.fireMortar(n > 1 ? tp.clone().add(_a.set((Math.random() - 0.5) * 90, 0, (Math.random() - 0.5) * 90)) : tp, T);
-    } else if (!this.spec.mortar && this.fireCd <= 0 && this.los && Math.abs(dy) < 0.5 && dist < 520) {
+    } else if (!this.spec.mortar && this.spec.laser > 0 && this.fireCd <= 0 && this.los && Math.abs(dy) < 0.5 && dist < 520) {
       this.burst = this.spec.minigun || 3; this.burstT = 0;
       this.fireCd = this.spec.fireEvery + Math.random() * 0.6;
     }
@@ -656,12 +680,12 @@ export class Tripod {
 
   // The Uber Pod's big laser: one slow, heavy bolt.
   fireBig(tp, T) {
-    const g = this.game;
+    const g = this.game, speed = this.spec.bigSpeed || 380;
     const from = this.model.muzzleBig.getWorldPosition(new THREE.Vector3());
     const aim = tp.clone();
-    if (T.ent.vel) aim.addScaledVector(T.ent.vel, from.distanceTo(tp) / 380);
+    if (T.ent.vel) aim.addScaledVector(T.ent.vel, from.distanceTo(tp) / speed);
     g.projectiles.fire({
-      pos: from, dir: aim.sub(from).normalize(), speed: 380, damage: this.spec.big * (T.kind === 'kaiju' ? 3 : 1),
+      pos: from, dir: aim.sub(from).normalize(), speed, damage: this.spec.big * (T.kind === 'kaiju' ? 3 : 1),
       owner: T.kind === 'kaiju' ? 'tripod' : 'kaiju', src: this, color: '#ff6a2a', size: 30, radius: 8, smash: 2.5, life: 4,
     });
     g.fx.glow(from, RED, 90, 0.2);

@@ -146,6 +146,12 @@ Built the same day. **Claude's calls:**
 - **Alien Dropships** come down out of orbit, hover, and drop tripods that are **already awake** (no
   lightning, no climbing out). Weak spot: the glowing core underneath. **The Mothership** is the big one.
 - The sky in Part 3 is full of orange lights: the fleet in orbit.
+- Patrick, later the same day: "I want the ships to come down, drop the tripods, then leave, and I want to
+  see all the ships from Earth and the destroyed planet. And new tripods." Dropships now leave after their
+  last drop (the Mothership stays: Claude's call, it is the boss). The Part 3 and Free Play sky shows the
+  fleet as ship shapes and lights, and the broken enemy planet. Five new tripods, all Claude's calls:
+  **Titan Pod** (huge, armored, stomps), **Sniper Pod** (sees far, one strong fast shot), **Repair Pod**
+  (fixes other tripods), **Flame Pod** (runs up and breathes fire), **Thunder Pod** (calls lightning).
 - Missions 16 to 19: Years Later, They Are All Awake, More and More Ships, The Mothership.
 - Code: `src/entities/ship.js`, `WEAPONS` in `src/config.js`, `src/campaign.js`.
 
