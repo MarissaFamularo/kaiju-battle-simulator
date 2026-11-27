@@ -51,7 +51,7 @@ export class AlienMessage {
     this.el.style.display = 'flex';
     this.el.querySelector('#am-text').textContent = '';
     this.el.querySelector('#am-foot').style.opacity = 0;
-    this.app.nav.clear();
+    this.app.nav.clear(); this.app.nav.show(false);
     this.app.game.hud.show(false);
     audio.stopLoops();
     this.update(0);
@@ -114,7 +114,7 @@ export class AlienMessage {
     }
     this.ships.instanceMatrix.needsUpdate = true;
     if (t >= T.CARD) {
-      if (this.enter('card')) { foot.textContent = 'TO BE CONTINUED IN PART 5'; foot.style.opacity = 1; audio.play('horn'); }
+      if (this.enter('card')) { foot.textContent = 'PART 5: THE ALIEN PLANET'; foot.style.opacity = 1; audio.play('horn'); }
     }
     if (t >= T.END) this.finish();
   }

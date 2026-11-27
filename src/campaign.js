@@ -12,6 +12,9 @@
 //   failed(g, s)     a reason string if you have lost, else null
 //   win              what the navigator says when you win
 
+import { CoreReactor } from './entities/ship.js';
+
+const s0 = { Reactor: CoreReactor };
 const STORE = 'kbs.campaign.v1';
 export function campaignProgress() {
   try {
@@ -409,5 +412,95 @@ export const MISSIONS = [
     failed: () => null,
     win: 'THE COLOSSUS HAS FALLEN! Humans and kaiju saved their home together, and you led the way, pilot! Wait... we are picking up a signal.',
     ending: 'message',   // plays the message from the aliens
+  },
+  // ------------------------------------------------------------------ PART 5: THE ALIEN PLANET
+  // Patrick, 2026-11-27: "In part five the Venture Stars deliver hundreds of mechs like Titans, Rangers and
+  // the walking Guardians, hundreds, and they are all on the planet. Then we plant a bomb and the planet
+  // goes boom." The missions are Claude's calls.
+  {
+    title: 'The Venture Stars',
+    part: 5, alien: true, cutscene: 'venture', scouts: 4, walkers: 2, allyFrames: ['titan', 'ranger', 'scout'], scoutPower: 2,
+    brief: 'Part 5! Giant ships called Venture Stars have carried hundreds of mechs to the alien planet: Titans, Rangers and Guardian Walkers. The whole army is down. But the planet has a shield, and the bomb cannot come through it. Destroy the 3 Shield Generators!',
+    startAt: (g) => { const c = g.city.places.forest; return { x: c.x + 250, z: c.z + 250 }; },
+    start(g, s) {
+      s.gens = [];
+      const m = g.mech.pos, B = g.city.bound - 250;
+      for (let i = 0; i < 3; i++) {
+        const a = g.mech.yaw + (i - 1) * 0.9, d = 600 + i * 160;
+        const x = Math.max(-B, Math.min(B, m.x + Math.sin(a) * d)), z = Math.max(g.city.waterEdge + 200, Math.min(B, m.z + Math.cos(a) * d));
+        const gen = new s0.Reactor(g, { x, z, generator: true });
+        g.kaijus.push(gen); s.gens.push(gen);
+        g.spawnAwake(['attacker', 'gatling', 'tank'][i], x + 90, z + 60);
+      }
+      g.hud.alert('DESTROY THE 3 SHIELD GENERATORS', 5, true);
+      g.nav.say('p5', 'We are on their planet. Look at the green grid in the sky: that is the shield. The three Shield Generators are the green glowing balls ahead, with beams going up. Your army is right behind you!', 3, 0);
+    },
+    tick(g, s) {
+      if (s.gens && !g.shieldDown && beaten(g, 'generator') >= 3) {
+        g.shieldDown = true;
+        g.hud.alert('THE SHIELD IS DOWN!', 5, true);
+        g.nav.say('shieldDown', 'The shield is gone! Look up, the sky is clear. Now the bomb can come down.', 3, 0);
+      }
+    },
+    goal: (g) => (beaten(g, 'generator') >= 3 ? 'Destroy the last guards' : `Destroy the Shield Generators (${Math.min(3, beaten(g, 'generator'))}/3)`),
+    done: (g, s) => !!s.gens && beaten(g, 'generator') >= 3 && noneComing(g),
+    failed: () => null,
+    win: 'The shield is down! The Venture Stars are bringing the bomb.',
+  },
+  {
+    title: 'Hold the Landing Zone',
+    part: 5, alien: true, scouts: 4, walkers: 2, friends: 1, allyFrames: ['titan', 'ranger', 'scout'],
+    brief: 'The aliens know we are here, and they are throwing everything at the landing zone while the bomb is unloaded. You have Titans, Rangers, Guardian Walkers and a kaiju friend. Destroy 16 tripods and hold the line!',
+    startAt: (g) => { const c = g.city.places.forest; return { x: c.x + 250, z: c.z + 250 }; },
+    start(g, s) { s.sent = 0; s.wait = 3; g.shieldDown = true; },
+    tick(g, s, dt) {
+      s.wait -= dt;
+      if (s.sent >= 16 || s.wait > 0) return;
+      if (living(g).length + g.warnings.length >= (g.lowPower ? 4 : 5)) return;
+      s.wait = 5;
+      const types = ['tank', 'gatling', 'blink', 'boom', 'magnet', 'leech', 'acid', 'attacker', 'sprinter', 'flame', 'thunder', 'shield', 'commander'];
+      s.sent++;
+      g.queueTripod(types[Math.floor(Math.random() * types.length)], true);
+    },
+    goal: (g) => `Hold the landing zone: destroy 16 tripods (${Math.min(16, g.stats.tripods)}/16)`,
+    done: (g, s) => s.sent >= 16 && g.stats.tripods >= 16 && noneComing(g),
+    failed: () => null,
+    win: 'The landing zone held! The bomb is ready. It is the size of a house, and only a Jaeger can carry it.',
+  },
+  {
+    title: 'Plant the Bomb',
+    part: 5, alien: true, scouts: 3, walkers: 2, allyFrames: ['titan', 'ranger', 'scout'], ending: 'bomb',
+    brief: 'This is it. Carry the bomb to the red beam of light, hold still for 6 seconds to plant it, then RUN back to the blue beam where the Venture Star will pick you up. You get 90 seconds. Then the planet goes boom.',
+    startAt: (g) => { const c = g.city.places.forest; return { x: c.x + 250, z: c.z + 250 }; },
+    start(g, s) {
+      g.shieldDown = true;
+      const m = g.mech.pos, B = g.city.bound - 250;
+      s.exit = { x: m.x, z: m.z };
+      s.site = { x: Math.max(-B, Math.min(B, m.x + Math.sin(g.mech.yaw) * 820)), z: Math.max(g.city.waterEdge + 200, Math.min(B, m.z + Math.cos(g.mech.yaw) * 820)) };
+      g.addBeacon(s.site.x, s.site.z, '#ff3a3a');
+      g.addBeacon(s.exit.x, s.exit.z, '#38a8ff');
+      s.stage = 0; s.plant = 0; s.next = 8;
+      g.nav.say('bomb', 'You are carrying the bomb. Walk to the RED beam of light straight ahead. Your army will keep the tripods busy.', 3, 0);
+    },
+    tick(g, s, dt) {
+      s.next -= dt;
+      if (s.next <= 0 && living(g).length + g.warnings.length < 3) { s.next = 12; g.queueTripod(['attacker', 'gatling', 'boom', 'blink', 'tank', 'flame'][Math.floor(Math.random() * 6)], true); }
+      if (s.stage === 0 && dist(g.mech.pos, s.site) < 85) { s.stage = 1; g.hud.alert('HOLD STILL: PLANTING THE BOMB', 4, true); }
+      if (s.stage === 1) {
+        if (dist(g.mech.pos, s.site) < 120) s.plant += dt;
+        if (s.plant >= 6) {
+          s.stage = 2; s.timer = 90;
+          g.hud.alert('BOMB PLANTED! RUN TO THE BLUE BEAM', 6, true);
+          g.nav.say('bombRun', 'The bomb is planted and it is counting down! Run back to the BLUE beam. The Venture Star is waiting. Go, go, go!', 3, 0);
+        }
+      }
+      if (s.stage === 2) s.timer -= dt;
+    },
+    goal: (g, s) => (s.stage === 2 ? `RUN to the blue beam! ${Math.max(0, Math.ceil(s.timer))} seconds  (${Math.round(dist(g.mech.pos, s.exit))} away)`
+      : s.stage === 1 ? `Planting the bomb: hold still ${Math.max(0, Math.ceil(6 - s.plant))}`
+        : `Carry the bomb to the red beam (${s.site ? Math.round(dist(g.mech.pos, s.site)) : '?'} away)`),
+    done: (g, s) => s.stage === 2 && dist(g.mech.pos, s.exit) < 100,
+    failed: (g, s) => (s.stage === 2 && s.timer <= 0 ? 'The bomb went off before you reached the Venture Star.' : null),
+    win: 'You are aboard the Venture Star! Everyone is clear. Three... two... one...',
   },
 ];

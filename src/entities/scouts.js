@@ -3,6 +3,7 @@
 // Jaeger, carry a light Laser Blaster, and can be knocked out. A new one drops in later.
 import * as THREE from 'three';
 import { buildMech } from './mechModel.js';
+import { FRAMES } from '../config.js';
 import { segPointDist } from './projectiles.js';
 import { audio } from '../audio.js';
 
@@ -25,12 +26,14 @@ export class Scouts {
     this.respawnT = 0;
     this.nextLook = 0;
     this.power = 1;
+    this.frames = ['scout'];
   }
 
   // start a game with n scouts near the player
   // power > 1 is a veteran squadron (campaign): they hit harder and take half damage
-  deploy(n, power = 1) {
-    this.want = n; this.power = power;
+  // frames: which kinds join (part 5 brings Titans and Rangers as well as Scouts)
+  deploy(n, power = 1, frames = ['scout']) {
+    this.want = n; this.power = power; this.frames = frames;
     for (let i = 0; i < n; i++) this.add(140 + i * 60);
   }
 
@@ -43,12 +46,15 @@ export class Scouts {
       x = ref.x + Math.cos(a) * dist; z = ref.z + Math.sin(a) * dist;
       if (this.dry(x, z)) break;
     }
-    const model = buildMech({ ...look, frame: 'scout', left: 'laser', right: 'laser', head: 'visor', chest: 'standard' });
-    model.root.scale.setScalar(SCALE);
+    const frame = this.frames[(this.nextLook - 1) % this.frames.length];
+    const sc = SCALE * FRAMES[frame].scale / FRAMES.scout.scale;   // a Titan ally is bigger than a Scout
+    const kind = FRAMES[frame].name;
+    const model = buildMech({ ...look, frame, left: 'laser', right: frame === 'titan' ? 'cannon' : 'laser', head: frame === 'titan' ? 'dome' : 'visor', chest: 'standard' });
+    model.root.scale.setScalar(sc);
     g.scene.add(model.root);
     const s = {
-      ...look, model, root: model.root, pos: new THREE.Vector3(x, g.city.groundAt(x, z), z), vel: new THREE.Vector3(),
-      yaw: Math.random() * 6.28, hp: HP, maxHp: HP, dead: false, deadT: 0, radius: 8 * SCALE, height: 56 * SCALE,
+      ...look, name: look.name.replace('Scout', kind), sc, model, root: model.root, pos: new THREE.Vector3(x, g.city.groundAt(x, z), z), vel: new THREE.Vector3(),
+      yaw: Math.random() * 6.28, hp: HP * (frame === 'titan' ? 1.8 : frame === 'ranger' ? 1.3 : 1), maxHp: HP * (frame === 'titan' ? 1.8 : frame === 'ranger' ? 1.3 : 1), dead: false, deadT: 0, radius: 8 * sc, height: 56 * sc,
       walkPhase: 0, moveAmt: 0, fireCd: 1 + Math.random(), burst: 0, burstT: 0, aim: 0, waypoint: null, wpT: 0, avoid: 0, avoidT: 0, target: null, thinkT: 0,
     };
     this.list.push(s);
@@ -60,7 +66,7 @@ export class Scouts {
     return Math.abs(x) < B && Math.abs(z) < B && z > c.waterEdge + 40 && c.groundAt(x, z) > -1;
   }
 
-  chest(s, out) { return out.set(s.pos.x, s.pos.y + 40 * SCALE, s.pos.z); }
+  chest(s, out) { return out.set(s.pos.x, s.pos.y + 40 * s.sc, s.pos.z); }
 
   nearestEnemy(s) {
     let best = null, bd = SEE;
@@ -143,7 +149,7 @@ export class Scouts {
     for (const p of g.projectiles.list) {
       if (p.owner !== 'kaiju' || p.life <= 0) continue;
       if (Math.abs(p.pos.x - s.pos.x) > 40 || Math.abs(p.pos.z - s.pos.z) > 40) continue;
-      if (p.pos.distanceTo(this.chest(s, _b)) < 16 * SCALE + p.radius + 6) { this.hurt(s, p.damage, p.pos); p.life = 0; g.fx.sparks(p.pos, 14); }
+      if (p.pos.distanceTo(this.chest(s, _b)) < 16 * s.sc + p.radius + 6) { this.hurt(s, p.damage, p.pos); p.life = 0; g.fx.sparks(p.pos, 14); }
     }
   }
 
@@ -186,7 +192,7 @@ export class Scouts {
   animate(s, dt) {
     const j = s.model.j, sp = s.vel.length();
     const A = s.moveAmt += (Math.min(1.2, sp / SPEED) - s.moveAmt) * Math.min(1, dt * 6);
-    s.walkPhase += (sp * dt / (15 * SCALE)) * Math.PI;
+    s.walkPhase += (sp * dt / (15 * s.sc)) * Math.PI;
     const ph = s.walkPhase;
     const hip = Math.sin(ph) * 0.55 * A, kL = Math.max(0, -Math.cos(ph)) * A, kR = Math.max(0, Math.cos(ph)) * A;
     j.legL.rotation.x = -hip; j.legR.rotation.x = hip;

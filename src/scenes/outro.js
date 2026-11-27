@@ -88,16 +88,23 @@ export class Outro {
     document.body.appendChild(card);
   }
 
-  start(onDone) {
+  // mode 'planet': the Earth Cannon (end of part 2). mode 'bomb': the bomb you planted goes off (end of part 5).
+  start(onDone, mode = 'planet') {
     this.onDone = onDone;
+    this.mode = mode;
+    this.enemy.material.color.set(mode === 'bomb' ? '#3a2a5a' : '#7a2438');
+    this.card.innerHTML = mode === 'bomb'
+      ? '<div style="font-weight:900;font-size:min(8vw,76px);letter-spacing:.12em;text-shadow:0 0 30px #5affc0">THE PLANET WENT BOOM</div><div style="margin-top:18px;font-size:min(3vw,24px);letter-spacing:.3em;color:#9fffd8">YOU WON THE WAR. THE END.</div>'
+      : '<div style="font-weight:900;font-size:min(9vw,84px);letter-spacing:.14em;text-shadow:0 0 30px #ff4a2a">PART 3 BEGINS</div><div style="margin-top:18px;font-size:min(3vw,24px);letter-spacing:.3em;color:#ff8a6a">THE FLEET IS COMING</div>';
     this.t = 0; this.beat = ''; this.active = true; this.t0 = (this.t0 || 0) + 1; // t0 counts the showings, so one-time beats fire again next time
     this.enemy.visible = true; this.chunks.visible = false; this.ships.visible = this.engines.visible = false;
     this.beam.visible = false; this.flash.material.opacity = 0; this.ring.material.opacity = 0;
     this.card.style.display = 'none'; this.card.style.background = 'rgba(0,0,0,0)';
-    this.app.nav.clear();
+    this.app.nav.clear(); this.app.nav.show(false);
     this.app.game.hud.show(false);
     audio.stopLoops();
     $('cine').classList.add('show');
+    if (mode === 'bomb') this.t = T.BOOM - 4.5; // straight to the planet: no cannon this time
     this.update(0);
   }
 
@@ -131,6 +138,23 @@ export class Outro {
     cam.aspect = window.innerWidth / window.innerHeight; cam.updateProjectionMatrix();
     this.earthMat.uniforms.uTime.value += dt;
     const toEnemy = ENEMY.clone().sub(CANNON).normalize();
+    if (this.mode === 'bomb' && t < T.BOOM) {
+      // the Venture Stars are clear, and the bomb counts down
+      const left = Math.ceil(T.BOOM - t);
+      if (this.enter('count' + left)) { this.title(left > 3 ? 'THE BOMB IS PLANTED' : String(left), left > 3 ? 'the Venture Stars are flying clear' : ''); audio.play(left > 3 ? 'alarm' : 'uiBig'); }
+      const side0 = _p.crossVectors(toEnemy, new THREE.Vector3(0, 1, 0)).normalize();
+      cam.position.copy(ENEMY).addScaledVector(toEnemy, -2300).addScaledVector(side0, 700).add(new THREE.Vector3(0, 350, 0));
+      cam.lookAt(ENEMY);
+      return;
+    }
+    if (this.mode === 'bomb' && t >= T.FLEET) {
+      // no fleet this time: it is over
+      this.moveChunks(t - T.BOOM - 1.1);
+      this.flash.material.opacity = 0; this.ring.material.opacity = Math.max(0, this.ring.material.opacity - dt * 0.3);
+      if (this.enter('bombCard')) { this.title('', ''); this.card.style.display = 'flex'; requestAnimationFrame(() => { this.card.style.background = 'rgba(0,0,0,0.6)'; }); audio.play('uiBig'); }
+      if (t >= T.FLEET + 6) this.finish();
+      return;
+    }
     if (t < T.FIRE) {
       // the cannon charges up; the enemy planet is a red dot far away
       if (this.enter('charge')) { this.title('THE EARTH CANNON', 'built from the wrecks of every tripod you destroyed'); audio.play('rumble'); }
@@ -156,7 +180,7 @@ export class Outro {
       if (e > 1.1 && this.enemy.visible) {
         this.enemy.visible = false; this.chunks.visible = true; this.beam.visible = false;
         audio.play('explosion'); audio.play('thunder'); audio.play('rumble');
-        this.title('THE ENEMY PLANET IS DESTROYED!', 'direct hit');
+        this.title(this.mode === 'bomb' ? 'BOOM!' : 'THE ENEMY PLANET IS DESTROYED!', this.mode === 'bomb' ? 'the whole planet' : 'direct hit');
       }
       this.beam.scale.set(22, this.beamLen, 22);
       const boom = Math.max(0, e - 1.1);

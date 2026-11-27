@@ -180,6 +180,23 @@ Built the same day. **Claude's calls:**
   fleet lifts off.
 - Missions 20 to 24: The Link, Our Own Walkers, All-Out War, Into the Core, The Colossus.
 
+## Part 5: The Alien Planet
+
+Patrick, 2026-11-27, in his words: "In part five the Venture Stars deliver hundreds of mechs like Titans,
+Rangers and the walking Guardians, hundreds, and they are all on the planet. Then we plant a bomb and the
+planet goes boom."
+
+Built the same day. **Claude's calls:**
+- **The Venture Stars** opening (`src/scenes/venture.js`): three white carrier ships arrive over the shielded
+  planet, open their bays, and hundreds of mechs drop.
+- **The alien planet**: the huge map with a purple sky, a green shield grid overhead, two moons, alien spires,
+  and the Venture Stars in the sky.
+- **The army**: up to 300 mechs in ranks behind you (Titans blue, Rangers silver, Guardian Walkers yellow).
+  They are scenery. The mechs that fight are your allies: Titan, Ranger and Scout Jaegers plus Guardian Walkers.
+- Missions 25 to 27: The Venture Stars (destroy 3 Shield Generators), Hold the Landing Zone, Plant the Bomb
+  (carry it to the red beam, hold 6 seconds, run to the blue beam in 90 seconds).
+- **The ending**: the bomb counts down and the planet goes boom ("THE PLANET WENT BOOM. YOU WON THE WAR. THE END.").
+
 ## Build order
 
 1. **(Built 2026-11-27.) Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,

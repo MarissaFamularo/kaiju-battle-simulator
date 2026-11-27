@@ -65,7 +65,7 @@ export class SneakScene {
     this.hat = this.costume();
     this.scene.add(this.hat);
     this.hatOff = 0;
-    this.app.nav.clear();
+    this.app.nav.clear(); this.app.nav.show(false);
     this.app.game.hud.show(false);
     audio.stopLoops();
     $('cine').classList.add('show');

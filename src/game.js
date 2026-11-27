@@ -56,7 +56,7 @@ export class Game {
     this.scouts = new Scouts(this); // friendly scout Jaegers
     this.camps = kind === 'wasteland' ? new Camps(this) : null; // survivor camps and bunkers
     this.kaijus = [];
-    this.sky = null;
+    this.sky = null; this.shieldDome = null; this.shieldDown = false;
     this.warnings = [];
     this.mech = null;
     this.pilot = null;
@@ -132,7 +132,7 @@ export class Game {
     this.attacked = false;
     audio.intensity = 0.2;
     this.clouds();
-    if ((this.mission && this.mission.part >= 3 && !this.mission.core) || mode === 'freeplay') this.skyFleet();
+    if ((this.mission && this.mission.part >= 3 && !this.mission.core && !this.mission.alien) || mode === 'freeplay') this.skyFleet();
     if (grounded) this.startGrounded();
   }
 
@@ -254,6 +254,80 @@ export class Game {
     this.reactor = new CoreReactor(this, { x, z });
     this.kaijus.push(this.reactor);
     return this.reactor;
+  }
+
+  // Part 5: we are on the aliens' own planet. Purple sky, a green shield overhead, and our Venture Stars above.
+  enterAlienPlanet() {
+    this.scene.fog = new THREE.Fog('#3a1f4a', 420, 3400);
+    this.scene.background = new THREE.Color('#1a0d26');
+    if (this.city.sky) this.city.sky.visible = false;
+    if (this.city.sun) this.city.sun.color.set('#d8b8ff');
+    this.scene.add(new THREE.HemisphereLight('#b48aff', '#1f4a3a', 0.9));
+    const sky = this.sky = new THREE.Group();
+    const noFog = { fog: false, depthWrite: false };
+    const back = new THREE.Mesh(new THREE.SphereGeometry(8000, 24, 16), new THREE.MeshBasicMaterial({ color: '#241238', side: THREE.BackSide, ...noFog })); sky.add(back);
+    // the shield: a green grid across the whole sky (it goes away when the generators are destroyed)
+    this.shieldDome = new THREE.Mesh(new THREE.IcosahedronGeometry(6500, 3), new THREE.MeshBasicMaterial({ color: '#5affc0', wireframe: true, transparent: true, opacity: 0.35, ...noFog }));
+    sky.add(this.shieldDome);
+    // two moons
+    const moons = this.skyWreck = new THREE.Group();
+    for (const [x, y, z, r, c] of [[-3800, 3600, -3200, 520, '#c8b8e8'], [3000, 2600, -4600, 260, '#8affc0']]) { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), new THREE.MeshBasicMaterial({ color: c, ...noFog })); m.position.set(x, y, z); moons.add(m); }
+    sky.add(moons);
+    // the Venture Stars, waiting overhead
+    const stars = this.skyShips = new THREE.Group();
+    const white = new THREE.MeshBasicMaterial({ color: '#dfe6f0', ...noFog }), blue = new THREE.MeshBasicMaterial({ color: '#5ac8ff', ...noFog });
+    for (let i = 0; i < 3; i++) {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(new THREE.BoxGeometry(160, 80, 760), white));
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(164, 14, 560), blue); stripe.position.y = -42; g.add(stripe);
+      for (const sx of [-1, 1]) { const w = new THREE.Mesh(new THREE.BoxGeometry(200, 14, 260), white); w.position.set(sx * 170, -10, -220); g.add(w); }
+      const a = i * 2.1 + 0.4;
+      g.position.set(Math.cos(a) * 2300, 1500 + i * 260, Math.sin(a) * 2300); g.rotation.y = -a;
+      stars.add(g);
+    }
+    sky.add(stars);
+    this.scene.add(sky);
+    // alien spires all over the land
+    const spire = new THREE.MeshBasicMaterial({ color: '#7dffb0' }), spire2 = new THREE.MeshBasicMaterial({ color: '#b07dff' });
+    const m = this.mech.pos;
+    for (let i = 0; i < (this.lowPower ? 40 : 70); i++) {
+      const a = Math.random() * 6.28, r = 260 + Math.random() * 1700, x = m.x + Math.cos(a) * r, z = m.z + Math.sin(a) * r, h = 60 + Math.random() * 240;
+      if (Math.abs(x) > this.city.bound || Math.abs(z) > this.city.bound) continue;
+      const c = new THREE.Mesh(new THREE.ConeGeometry(5 + Math.random() * 10, h, 5), i % 2 ? spire : spire2);
+      c.position.set(x, this.city.groundAt(x, z) + h / 2 - 4, z); this.scene.add(c);
+    }
+  }
+
+  // Part 5: "hundreds of mechs... and they are all on the planet". The army that the Venture Stars dropped
+  // stands in ranks behind you. (The ones that actually fight are your allies; these hold the landing zone.)
+  addArmy(x, z, yaw) {
+    const N = this.lowPower ? 150 : 300;
+    const geos = [new THREE.BoxGeometry(11, 22, 8), new THREE.BoxGeometry(8, 17, 6), new THREE.BoxGeometry(12, 7, 12)];
+    const cols = ['#2c5aa0', '#c9d3df', '#f2c230'];
+    const fx = Math.sin(yaw), fz = Math.cos(yaw);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0)), p = new THREE.Vector3(), sc = new THREE.Vector3(1, 1, 1);
+    for (let kind = 0; kind < 3; kind++) {
+      const mesh = new THREE.InstancedMesh(geos[kind], new THREE.MeshStandardMaterial({ color: cols[kind], roughness: 0.6, metalness: 0.3 }), N / 3);
+      const legs = new THREE.InstancedMesh(new THREE.BoxGeometry(kind === 2 ? 14 : 7, kind === 2 ? 26 : 16, 3), new THREE.MeshStandardMaterial({ color: '#39404e' }), N / 3);
+      for (let i = 0; i < N / 3; i++) {
+        const row = Math.floor(i / 10) * 3 + kind, col = i % 10;
+        const back = 120 + row * 34, side = (col - 4.5) * 30 + (row % 2) * 12;
+        const px = x - fx * back + fz * side, pz = z - fz * back - fx * side, gy = this.city.groundAt(px, pz);
+        const legH = kind === 2 ? 26 : 16;
+        legs.setMatrixAt(i, m.compose(p.set(px, gy + legH / 2, pz), q, sc));
+        mesh.setMatrixAt(i, m.compose(p.set(px, gy + legH + (kind === 2 ? 3.5 : kind === 0 ? 11 : 8.5), pz), q, sc));
+      }
+      mesh.castShadow = false; mesh.frustumCulled = false; legs.frustumCulled = false;
+      this.scene.add(mesh, legs);
+    }
+  }
+
+  // a tall beam of light that marks a place to go
+  addBeacon(x, z, color = '#ff3a3a') {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 900, 10, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, depthWrite: false, fog: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+    b.position.set(x, this.city.groundAt(x, z) + 450, z);
+    this.scene.add(b);
+    return b;
   }
 
   // a tripod that is already awake and walking (part 3: nothing is asleep underground any more)
@@ -482,8 +556,9 @@ export class Game {
     this.updateCamera(rawDt);
     if (this.sky) { // the fleet and the broken planet stay far away, and the ships circle slowly
       this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
-      this.skyShips.rotation.y += rawDt * 0.012;
-      this.skyWreck.rotation.y += rawDt * 0.01;
+      this.skyShips.rotation.y += rawDt * (this.shieldDome ? 0.004 : 0.012);
+      this.skyWreck.rotation.y += rawDt * (this.shieldDome ? 0.001 : 0.01);
+      if (this.shieldDome) { this.shieldDome.rotation.y += rawDt * 0.006; this.shieldDome.material.opacity += ((this.shieldDown ? 0 : 0.3 + Math.sin(this.time * 1.5) * 0.08) - this.shieldDome.material.opacity) * Math.min(1, rawDt * 1.5); }
     }
     if (playing || this.state === 'over') this.computeAim();
     if (playing || this.state === 'over') this.hud.update(rawDt, this);
@@ -658,7 +733,8 @@ export class Game {
     this.stats.start = this.time;
     if (this.app.settings.music) audio.startMusic();
     // scout Jaegers help out everywhere except the story modes
-    if (this.mission && this.mission.scouts) this.scouts.deploy(this.mission.scouts, this.mission.scoutPower || 1); // some missions bring a squadron
+    if (this.mission && this.mission.scouts) this.scouts.deploy(this.mission.scouts, this.mission.scoutPower || 1, this.mission.allyFrames || ['scout']); // some missions bring a squadron
+    if (this.mission && this.mission.alien) { this.enterAlienPlanet(); this.addArmy(this.mech.pos.x, this.mech.pos.z, this.mech.yaw); }
     if (this.mission) { for (let i = 0; i < (this.mission.friends || 0); i++) this.spawnFriend(); for (let i = 0; i < (this.mission.walkers || 0); i++) this.spawnWalker(); }
     if (!['campaign', 'mission'].includes(this.mode)) {
       this.scouts.deploy(this.mode === 'freeplay' ? 3 : 2);
