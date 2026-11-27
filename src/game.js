@@ -95,6 +95,8 @@ export class Game {
       cfg.right = 'laser'; // nothing else can hurt an Uber Pod or the Emperor Pod
       this.ms.gaveLaser = true;
     }
+    // the Emperor Pod is too tall for a sword to reach its body, so that mission always brings a Laser Blaster
+    if (this.mission && this.mission.needsLaser && cfg.left !== 'laser' && cfg.right !== 'laser') { cfg.right = 'laser'; this.ms.gaveLaser = true; }
     if (this.dirty || kind !== this.worldKind) this.buildWorld(kind);
     this.dirty = true;
     this.fp = { t: 16, count: 0, craterCd: 0 }; // free play spawn timers
@@ -605,7 +607,7 @@ export class Game {
       if (ms.t < 5) return;
       ms.started = true;
       this.hud.alert(`MISSION ${this.missionIdx + 1}: ${M.title.toUpperCase()}`, 4);
-      if (ms.gaveLaser) this.nav.say('gaveLaser', 'You had no Energy Sword or Laser Blaster, so I bolted a Laser Blaster onto your right arm for this mission.', 3, 0);
+      if (ms.gaveLaser) this.nav.say('gaveLaser', 'I bolted a Laser Blaster onto your right arm for this mission. You are going to need it!', 3, 0);
       M.start(this, ms.s);
       return;
     }

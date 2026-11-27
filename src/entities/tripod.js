@@ -239,7 +239,7 @@ export class Tripod {
       { p: new THREE.Vector3(), r: 13 * this.spec.hull, weak: false },  // hull
       { p: new THREE.Vector3(), r: 5.5 * Math.max(1, this.spec.hull * 0.8), weak: true, name: 'CORE' },  // power core underneath
       { p: new THREE.Vector3(), r: 7, weak: false },   // scanner head
-      { p: new THREE.Vector3(), r: 4, weak: false }, { p: new THREE.Vector3(), r: 4, weak: false }, { p: new THREE.Vector3(), r: 4, weak: false }, // knees
+      { p: new THREE.Vector3(), r: 4 * S, weak: false }, { p: new THREE.Vector3(), r: 4 * S, weak: false }, { p: new THREE.Vector3(), r: 4 * S, weak: false }, // knees (bigger on the tall types, so a sword can reach something)
     ];
     this.body = game.physics.kinematicBall(x, -60, z, 12);
     // break out of the ground
@@ -429,7 +429,7 @@ export class Tripod {
     this.faceTarget(dt);
     if (this.stateT > (this.spec.immune ? 0.5 : 1.6)) { // the Uber Pod comes for you at once
       if (this.capsuleCd <= 0 && this.game.mech && !this.game.mech.dead && this.game.aliens) {
-        this.capsuleCd = 45;
+        this.capsuleCd = this.type === 'emperor' ? 90 : 45;
         this.game.aliens.launchCapsule(this.headPos().setY(this.pos.y + this.bodyY + 6), this.game.mech);
       }
       this.fireCd = 0.6;
@@ -567,7 +567,7 @@ export class Tripod {
     f.to.set(this.pos.x + dx / d * reach, 0, this.pos.z + dz / d * reach);
     f.to.y = this.game.city.groundAt(f.to.x, f.to.z);
     f.t = 0; f.stomp = true;
-    this.stompCd = 2.8;
+    this.stompCd = this.spec.immune ? 5 : 2.8; // the Emperor Pod stomps less often than a Harvester
     this.game.nav.say('stompWarn', 'It is lifting a leg to stomp you! Move!', 2, 9);
   }
 

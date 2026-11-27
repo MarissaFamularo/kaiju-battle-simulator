@@ -41,7 +41,8 @@ Kaiju and tripods also **fight each other**.
    **(Claude's calls:** twice the height of an Attacker, gold armor and a crown; it has the
    Uber Pod's lasers and immunity, harvests camps and animals while it hunts, and stomps a
    Jaeger that gets under its legs; it does not grab a pilot on foot; campaign mission 8,
-   rare in Free Play, Y summons one in Free Smash.)
+   rare in Free Play, Y summons one in Free Smash. Patrick said it was too hard, so the same day its health
+   went from 3800 to 2200 and its lasers and stomp were weakened.)
 
 ### Little black aliens
 - Come out of the capsule. **Don't make them too scary.**

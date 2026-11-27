@@ -131,6 +131,6 @@ export const MISSIONS = [
     done: (g, s) => s.sent && g.kaijus.some((k) => k.type === 'emperor' && k.dead),
     failed: (g) => (g.camps.harvested >= 10 ? 'The Emperor Pod filled its cage with survivors.' : null),
     win: 'You destroyed the Emperor Pod! The invasion is broken, and the survivors can come out. You did it, pilot!',
-    needsSpecial: true,
+    needsSpecial: true, needsLaser: true,
   },
 ];
