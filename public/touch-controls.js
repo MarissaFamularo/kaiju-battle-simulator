@@ -20,6 +20,8 @@
 
   var css = document.createElement('style');
   css.textContent = [
+    /* no pinch-zoom or double-tap zoom anywhere (scrolling the hangar still works); the play controls below turn touch gestures off completely */
+    ':where(html.kbs-nozoom, html.kbs-nozoom *){touch-action:pan-x pan-y}',
     'body.kbs-touch{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}',
     'body.kbs-touch canvas{touch-action:none}',
     'body.kbs-touch input{-webkit-user-select:text;user-select:text}',
@@ -76,6 +78,23 @@
     if (!app || !app.input) return setTimeout(start, 200);
     var inp = app.input;
     document.body.classList.add('kbs-touch');
+
+    // Safari can still zoom the whole page, and then the game cannot be zoomed back out.
+    // Lock the page scale, and if it ever ends up zoomed anyway, snap it back to normal.
+    document.documentElement.classList.add('kbs-nozoom');
+    var vp = document.querySelector('meta[name=viewport]');
+    var VP = 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no';
+    if (vp) vp.setAttribute('content', VP);
+    function unzoom() {
+      var vv = window.visualViewport;
+      if (!vp || !vv || vv.scale < 1.02) return;
+      vp.setAttribute('content', 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=10');
+      setTimeout(function () { vp.setAttribute('content', VP); window.scrollTo(0, 0); }, 30);
+    }
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);
+    setInterval(unzoom, 1500);
+    document.addEventListener('dblclick', function (e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gestureend', function (e) { e.preventDefault(); unzoom(); }, { passive: false });
 
     // iPad has no mouse lock: treat the game as always "locked" while playing.
     inp.lock = function () { this.locked = true; this.fallbackLook = false; if (this.onLockChange) this.onLockChange(true); };
