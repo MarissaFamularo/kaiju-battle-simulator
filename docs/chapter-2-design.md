@@ -82,6 +82,13 @@ Kaiju and tripods also **fight each other**.
   button on iPad opens a menu of kaiju sizes and every tripod type; up to 8 enemies at once; not in
   Campaign or the classic Mission.) Code: `src/ui/spawnMenu.js`.
 
+- **Bad guys spawn farther away** so you can hunt them down (Patrick, 2026-11-27). On the huge map
+  kaiju come up 800 to 1400 away and tripods 650 to 1100 away; far ones are pinned to the radar rim.
+- **Scout Jaegers** (Patrick, 2026-11-27): other Jaegers walking around trying to destroy the bad guys.
+  **(Claude's calls:** 3 in Free Play, 2 in the other non-story modes, none in Campaign; small, colored,
+  light lasers that can hurt every tripod type; they can be knocked out and a new one drops in after
+  about 50 seconds.) Code: `src/entities/scouts.js`.
+
 ## The intro (instead of a loading screen)
 
 1. You are looking at the Earth.

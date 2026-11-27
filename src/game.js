@@ -15,6 +15,7 @@ import { Aliens } from './entities/aliens.js';
 import { Camps } from './entities/camps.js';
 import { MISSIONS, unlockMission } from './campaign.js';
 import { SpawnMenu } from './ui/spawnMenu.js';
+import { Scouts } from './entities/scouts.js';
 import { TRIPODS } from './config.js';
 import { audio } from './audio.js';
 
@@ -50,6 +51,7 @@ export class Game {
     this.military = new Military(this);
     this.drones = new Drones(this);
     this.aliens = new Aliens(this);
+    this.scouts = new Scouts(this); // friendly scout Jaegers
     this.camps = kind === 'wasteland' ? new Camps(this) : null; // survivor camps and bunkers
     this.kaijus = [];
     this.warnings = [];
@@ -183,7 +185,7 @@ export class Game {
   pickWildSpawn() {
     const ref = this.pilot && !this.pilot.dead ? this.pilot.pos : (this.mech ? this.mech.pos : new THREE.Vector3());
     const B = this.city.bound - 150;
-    const a = Math.random() * Math.PI * 2, d = 460 + Math.random() * 380;
+    const a = Math.random() * Math.PI * 2, d = 800 + Math.random() * 600; // far away, so you get to hunt it down
     const x = THREE.MathUtils.clamp(ref.x + Math.cos(a) * d, -B, B);
     const z = THREE.MathUtils.clamp(ref.z + Math.sin(a) * d, -B, B);
     const wet = this.city.groundAt(x, z) < -2;
@@ -250,7 +252,7 @@ export class Game {
     let x = 0, z = 0;
     for (let tries = 0; tries < 12; tries++) {
       const a = this.view.yaw + (Math.random() - 0.5) * (0.9 + tries * 0.4);
-      const d = 300 + Math.random() * 130;
+      const d = this.city.hasTerrain ? 650 + Math.random() * 450 : 330 + Math.random() * 200; // far off on the big map
       x = THREE.MathUtils.clamp(ref.x + Math.sin(a) * d, -B, B);
       z = THREE.MathUtils.clamp(ref.z + Math.cos(a) * d, this.city.waterEdge + 120, B);
       const farFromMe = Math.hypot(x - ref.x, z - ref.z) > 220;
@@ -329,6 +331,7 @@ export class Game {
       this.projectiles.update(dt);
       this.military.update(dt);
       this.aliens.update(dt);
+      this.scouts.update(dt);
       if (this.camps) this.camps.update(dt);
       this.drones.update(dt, this.mech && this.state !== 'landing' ? this.mech.pos : null);
     }
@@ -514,6 +517,11 @@ export class Game {
     this.nav.say('touchdown', `Touchdown! ${this.cfg.name} is in the city. Move with W A S D and look with the mouse.`, 3, 0);
     this.stats.start = this.time;
     if (this.app.settings.music) audio.startMusic();
+    // scout Jaegers help out everywhere except the story modes
+    if (!['campaign', 'mission'].includes(this.mode)) {
+      this.scouts.deploy(this.mode === 'freeplay' ? 3 : 2);
+      setTimeout(() => this.nav.say('scouts', 'Scout Jaegers are patrolling with you. They are the small colored arrows on your radar, and they shoot at any bad guy they find.', 2, 0), 38000);
+    }
     if (this.mode === 'freeplay') {
       setTimeout(() => this.nav.say('freePlay', 'Free Play! This is the big map. The giant hill is east, the beach and the storm are north, the forest is northwest and the crater is southwest. Kaiju and tripods can show up anywhere.', 3, 0), 6000);
       setTimeout(() => this.nav.say('freePlay2', 'Look for green flags: those are survivor camps. Get out with F to collect supplies, or stand your Jaeger next to a camp to pick up survivors and carry them to a bunker.', 2, 0), 22000);

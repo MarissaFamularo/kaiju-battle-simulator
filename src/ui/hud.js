@@ -247,7 +247,8 @@ export class HUD {
     }
     // warnings: fuzzy zones
     for (const w of g.warnings) {
-      const [wx, wy] = toR(w.zone.x, w.zone.z);
+      let [wx, wy] = toR(w.zone.x, w.zone.z);
+      { const d = Math.hypot(wx, wy); if (d > R - 10) { wx *= (R - 10) / d; wy *= (R - 10) / d; } } // far ones sit on the rim
       const pr = (w.radius / range) * R;
       const a = 0.25 + Math.sin(g.time * 8) * 0.15;
       c.fillStyle = w.tripod ? `rgba(190,215,255,${a})` : `rgba(255,59,59,${a})`;
@@ -260,8 +261,9 @@ export class HUD {
     // kaiju
     for (const k of g.kaijus) {
       if (k.dead) continue;
-      const [x, y] = toR(k.pos.x, k.pos.z);
-      const r = 4 + k.cat;
+      let [x, y] = toR(k.pos.x, k.pos.z);
+      let r = 4 + k.cat;
+      { const d = Math.hypot(x, y); if (d > R - 6) { x *= (R - 6) / d; y *= (R - 6) / d; r *= 0.7; } } // far away: pinned to the rim, pointing the way
       c.fillStyle = k.isTripod ? '#c77dff' : (k.emerging ? '#ff8a3a' : '#ff3b3b');
       c.shadowColor = c.fillStyle; c.shadowBlur = 8;
       c.beginPath();
@@ -269,6 +271,14 @@ export class HUD {
       else c.arc(x, y, r, 0, Math.PI * 2);
       c.fill();
       c.shadowBlur = 0;
+    }
+    // scout Jaegers: small arrows in their own color
+    if (g.scouts) for (const s of g.scouts.list) {
+      if (s.dead) continue;
+      let [x, y] = toR(s.pos.x, s.pos.z);
+      const d = Math.hypot(x, y); if (d > R - 6) { x *= (R - 6) / d; y *= (R - 6) / d; }
+      c.fillStyle = s.glow; c.beginPath(); c.moveTo(x, y - 5); c.lineTo(x + 4, y + 4); c.lineTo(x - 4, y + 4); c.closePath(); c.fill();
+      c.strokeStyle = '#fff'; c.lineWidth = 1; c.stroke();
     }
     // mech (when pilot is outside)
     if (g.pilot && !g.pilot.dead && g.mech) {
