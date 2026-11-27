@@ -281,7 +281,7 @@ class App {
     end.classList.toggle('end-defeat', !win);
     const camp = s.campaign;
     $('end-title').textContent = win ? (camp ? (camp.last ? 'CAMPAIGN COMPLETE' : 'MISSION COMPLETE') : 'VICTORY') : s.title;
-    $('end-sub').textContent = win ? (camp ? (camp.last ? `${this.hangar.cfg.name} broke the corruption in the city. But the rest of the Earth is still sick...` : `Mission ${camp.n}: ${camp.title}`) : `${this.hangar.cfg.name} saved the city!`) : s.sub;
+    $('end-sub').textContent = win ? (camp ? (camp.last ? `${this.hangar.cfg.name} broke the Dimension Gate. But one Ultra Pod got through first...` : `Mission ${camp.n}: ${camp.title}`) : `${this.hangar.cfg.name} saved the city!`) : s.sub;
     $('end-stats').innerHTML = [
       ['Kaiju defeated', s.kills - (s.tripods || 0)], ['Tripods destroyed', s.tripods || 0], ...(s.saved !== null && s.saved !== undefined ? [['Survivors saved', s.saved]] : []), ['Weak spot hits', s.weak], ['Buildings smashed', s.buildings], ['Damage dealt', s.damage],
       ['Waves reached', s.wave], ['Power plant', `${s.plant}%`], ['Battle time', s.time],

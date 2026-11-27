@@ -335,6 +335,24 @@ Object.assign(TRIPODS, {
   },
 });
 
+// Part 7 (Patrick, 2026-11-27): "ultra pods that have the power of all of the tripods combined and is as
+// tall as five mechs". Shield + laser mini guns + big laser + fire bombs + lightning + stomp + magnet, and
+// it calls Attackers. Any weapon hurts it, but it has a LOT of health.
+Object.assign(TRIPODS, {
+  ultra: {
+    id: 'ultra', name: 'ULTRA POD', short: 'Ultra Pod', size: 5, hull: 3.4, tint: '#20242c', boss: '#ff3aff', radar: 4,
+    hp: 5200, speed: 9, range: 720, cone: 0.3, lose: 14, far: 760,
+    laser: 4, minigun: 6, fireEvery: 3.4,
+    big: 22, bigEvery: 8, bigRange: 700,
+    lob: { dmg: 15, count: 2, every: 7 },
+    storm: 20, stormEvery: 9,
+    stomp: 55, magnet: 16,
+    shield: 600, shieldWait: 6,
+    summon: { type: 'attacker', every: 34, max: 2 },
+    intro: 'An ULTRA POD! It is as tall as five Jaegers and it has the power of every tripod at once: a shield, lasers, fire bombs, lightning, a magnet and giant feet. Pop the shield, stay out of the blue rings, and do NOT stand under it!',
+  },
+});
+
 // Invasion mode waves: numbers are kaiju categories, 'T' is an attacker tripod.
 export const INVASION_WAVES = [
   ['T'],

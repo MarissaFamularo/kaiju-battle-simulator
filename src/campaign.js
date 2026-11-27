@@ -564,4 +564,75 @@ export const MISSIONS = [
     failed: () => null,
     win: 'The city is clean again! But this was only one city. The whole Earth is still corrupted, and the war is far from over.',
   },
+  // ------------------------------------------------------------------ PART 7: THE NEW DIMENSION
+  // Patrick, 2026-11-27: "This time the tripods got an advantage. They learn how to make ultra pods that
+  // have the power of all of the tripods combined and is as tall as five mechs, and are trying to make a new
+  // dimension with planets, and the mechs are trying to stop them."
+  {
+    title: 'The Ultra Pod',
+    part: 7, corrupt: true, rift: true, scouts: 4, walkers: 2, friends: 1, allyFrames: ['titan', 'ranger', 'titan', 'scout'],
+    brief: 'Part 7! The tripods have the advantage now. They have learned to build an ULTRA POD: as tall as five Jaegers, with the power of every tripod combined. And look at the sky: they are tearing open a new dimension. Every mech we have is here. Bring the Ultra Pod down!',
+    start(g, s) {
+      const m = g.mech.pos, B = g.city.bound - 300;
+      g.spawnAwake('ultra', Math.max(-B, Math.min(B, m.x + Math.sin(g.mech.yaw) * 520)), Math.max(g.city.waterEdge + 250, Math.min(B, m.z + Math.cos(g.mech.yaw) * 520)));
+      s.sent = true;
+      g.hud.alert('ULTRA POD!', 5, true);
+      g.nav.say('rise_ultra', 'An ULTRA POD! It is as tall as five Jaegers and it has the power of every tripod at once: a shield, lasers, fire bombs, lightning, a magnet and giant feet. Pop the shield, stay out of the blue rings, and do NOT stand under it!', 3, 0);
+    },
+    goal: (g) => (beaten(g, 'ultra') ? 'Destroy the tripods it called' : 'Bring down the ULTRA POD'),
+    done: (g, s) => s.sent && beaten(g, 'ultra') >= 1 && noneComing(g),
+    failed: () => null,
+    win: 'The Ultra Pod is down! It took all of us. And they are building more.',
+  },
+  {
+    title: 'The Pylons',
+    part: 7, corrupt: true, rift: true, scouts: 3, walkers: 2, allyFrames: ['titan', 'ranger', 'scout'],
+    brief: 'The rift in the sky is growing. Four blue Gate Pylons on the ground are feeding it. Destroy all 4 before the new dimension opens all the way! Each pylon you destroy slows it down.',
+    start(g, s) {
+      s.pylons = []; s.charge = 0;
+      const m = g.mech.pos, B = g.city.bound - 250;
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * 6.28 + 0.6, d = 520 + (i % 2) * 220;
+        const x = Math.max(-B, Math.min(B, m.x + Math.cos(a) * d)), z = Math.max(g.city.waterEdge + 200, Math.min(B, m.z + Math.sin(a) * d));
+        const p = new s0.Reactor(g, { x, z, pylon: true });
+        g.kaijus.push(p); s.pylons.push(p);
+        g.addBeacon(x, z, '#38a8ff');
+        g.spawnAwake(['gatling', 'tank', 'shield', 'flame'][i], x + 80, z + 60);
+      }
+      g.hud.alert('DESTROY THE 4 GATE PYLONS', 5, true);
+    },
+    tick(g, s, dt) {
+      if (!s.pylons) return;
+      const left = 4 - Math.min(4, beaten(g, 'pylon'));
+      s.charge = Math.min(100, s.charge + dt * left * 0.085);   // about 5 minutes with all four standing
+      g.riftK = 0.35 + s.charge / 100 * 0.65;
+    },
+    goal: (g, s) => `Destroy the Gate Pylons (${Math.min(4, beaten(g, 'pylon'))}/4)   new dimension: ${Math.floor(s.charge || 0)}% open`,
+    done: (g, s) => !!s.pylons && beaten(g, 'pylon') >= 4,
+    failed: (g, s) => ((s.charge || 0) >= 100 ? 'The new dimension opened all the way.' : null),
+    win: 'All four pylons are down and the rift has stopped growing! Now we can reach the Gate itself.',
+  },
+  {
+    title: 'Stop the New Dimension',
+    part: 7, corrupt: true, rift: true, scouts: 4, walkers: 2, friends: 1, allyFrames: ['titan', 'ranger', 'titan', 'scout'],
+    brief: 'This is the Dimension Gate: a giant glowing ball with new planets already spinning inside it. Two blue pylons protect it and an Ultra Pod guards it. Destroy the 2 pylons, then destroy the Gate before the tripods can walk through to their new dimension!',
+    start(g, s) {
+      const m = g.mech.pos, B = g.city.bound - 300;
+      const gx = Math.max(-B, Math.min(B, m.x + Math.sin(g.mech.yaw) * 700)), gz = Math.max(g.city.waterEdge + 250, Math.min(B, m.z + Math.cos(g.mech.yaw) * 700));
+      s.gate = new s0.Reactor(g, { x: gx, z: gz, gate: true }); s.gate.locked = true; g.kaijus.push(s.gate);
+      for (const sx of [-1, 1]) { const p = new s0.Reactor(g, { x: gx + sx * 230, z: gz + 60, pylon: true }); g.kaijus.push(p); g.addBeacon(gx + sx * 230, gz + 60, '#38a8ff'); }
+      g.spawnAwake('ultra', gx - 60, gz - 260);
+      g.riftK = 0.8;
+      g.hud.alert('THE DIMENSION GATE', 5, true);
+      g.nav.say('gate', 'There it is: the Dimension Gate. You cannot hurt it while the two blue pylons are standing. Pylons first, then the Gate. And watch out for the Ultra Pod!', 3, 0);
+    },
+    tick(g, s) {
+      if (s.gate && s.gate.locked && beaten(g, 'pylon') >= 2) { s.gate.locked = false; g.hud.alert('THE GATE IS OPEN TO ATTACK!', 4, true); g.nav.say('gateOpen', 'Both pylons are down! The Gate can be hurt now. Hit it with everything!', 3, 0); }
+      if (s.gate && s.gate.dead) g.riftK = Math.max(0, g.riftK - 0.01);
+    },
+    goal: (g, s) => (s.gate && s.gate.locked ? `Destroy the 2 pylons protecting the Gate (${Math.min(2, beaten(g, 'pylon'))}/2)` : 'Destroy the Dimension Gate!'),
+    done: (g) => beaten(g, 'gate') >= 1,
+    failed: () => null,
+    win: 'The Gate is destroyed and the rift is closing! The new dimension is shut. But the scouts saw one Ultra Pod walk through just before it closed...',
+  },
 ];

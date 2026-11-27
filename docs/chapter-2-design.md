@@ -215,6 +215,21 @@ Built the same day. **Claude's calls:**
 - **Corruption Hearts**: glowing purple balls that feed the growths.
 - Missions 28 to 30: Home?, The Factory Pods, Hearts of the Corruption. The war is NOT over at the end.
 
+## Part 7: The New Dimension
+
+Patrick, 2026-11-27, in his words: "This time the tripods got an advantage. They learn how to make ultra pods
+that have the power of all of the tripods combined and is as tall as five mechs, and are trying to make a new
+dimension with planets, and the mechs are trying to stop them."
+
+Built the same day. **Claude's calls:**
+- **ULTRA POD**: size 5 (five times an Attacker, which is Jaeger height). It has a shield, laser mini guns, a
+  big laser, fire bombs, lightning, a magnet, a stomp, and it calls Attackers. 5200 health. Any weapon hurts it.
+- **The rift**: a purple tear in the sky with five new planets inside. It grows as the dimension opens.
+- **Gate Pylons** (blue) feed the rift; **the Dimension Gate** is a giant glowing ball with planets spinning
+  inside, and cannot be hurt until its pylons are destroyed.
+- Missions 31 to 33: The Ultra Pod, The Pylons (the only mission you can lose on a timer: about 5 minutes),
+  Stop the New Dimension. It ends with one Ultra Pod escaping through the Gate. The war is not over.
+
 ## Build order
 
 1. **(Built 2026-11-27.) Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,

@@ -56,7 +56,7 @@ export class Game {
     this.scouts = new Scouts(this); // friendly scout Jaegers
     this.camps = kind === 'wasteland' ? new Camps(this) : null; // survivor camps and bunkers
     this.kaijus = [];
-    this.sky = null; this.shieldDome = null; this.shieldDown = false;
+    this.sky = null; this.shieldDome = null; this.shieldDown = false; this.rift = null; this.riftK = 0;
     this.warnings = [];
     this.mech = null;
     this.pilot = null;
@@ -331,6 +331,24 @@ export class Game {
     this.scene.add(vines, bulbs);
   }
 
+  // Part 7: the tripods are tearing open a new dimension. A purple rift in the sky with new planets inside it.
+  // this.riftK (0 to 1) is how far open it is.
+  enterRift() {
+    const noFog = { fog: false, depthWrite: false };
+    const rift = this.rift = new THREE.Group();
+    rift.add(new THREE.Mesh(new THREE.CircleGeometry(1000, 40), new THREE.MeshBasicMaterial({ color: '#12041f', side: THREE.DoubleSide, ...noFog })));
+    const edge = new THREE.Mesh(new THREE.RingGeometry(980, 1120, 48), new THREE.MeshBasicMaterial({ color: '#c07dff', side: THREE.DoubleSide, transparent: true, opacity: 0.9, ...noFog })); rift.add(edge);
+    const glow = new THREE.Mesh(new THREE.RingGeometry(1100, 1500, 48), new THREE.MeshBasicMaterial({ color: '#7d3aff', side: THREE.DoubleSide, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, ...noFog })); rift.add(glow);
+    this.riftPlanets = [];
+    for (const [c, r, x, y] of [['#5ac8ff', 230, -380, 160], ['#ffb04a', 150, 330, 300], ['#7dffb0', 190, 260, -330], ['#ff7df0', 110, -300, -380], ['#e8e0ff', 70, 20, 30]]) {
+      const pl = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), new THREE.MeshBasicMaterial({ color: c, ...noFog })); pl.position.set(x, y, 40); rift.add(pl); this.riftPlanets.push(pl);
+    }
+    rift.position.set(1500, 3600, -4200);
+    rift.lookAt(0, 300, 0);
+    this.riftK = 0.35;
+    (this.sky || this.scene).add(rift);
+  }
+
   // Part 5: "hundreds of mechs... and they are all on the planet". The army that the Venture Stars dropped
   // stands in ranks behind you. (The ones that actually fight are your allies; these hold the landing zone.)
   addArmy(x, z, yaw) {
@@ -591,6 +609,7 @@ export class Game {
       this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
       this.skyShips.rotation.y += rawDt * (this.shieldDome ? 0.004 : 0.012);
       this.skyWreck.rotation.y += rawDt * (this.shieldDome ? 0.001 : 0.01);
+      if (this.rift) { const k = 0.25 + this.riftK * 0.85 + Math.sin(this.time * 2) * 0.015; this.rift.scale.set(k, k, 1); this.riftPlanets.forEach((p, i) => { p.position.z = 40 + Math.sin(this.time * 0.6 + i) * 30; }); }
       if (this.shieldDome) { this.shieldDome.rotation.y += rawDt * 0.006; this.shieldDome.material.opacity += ((this.shieldDown ? 0 : 0.3 + Math.sin(this.time * 1.5) * 0.08) - this.shieldDome.material.opacity) * Math.min(1, rawDt * 1.5); }
     }
     if (playing || this.state === 'over') this.computeAim();
@@ -768,6 +787,7 @@ export class Game {
     // scout Jaegers help out everywhere except the story modes
     if (this.mission && this.mission.scouts) this.scouts.deploy(this.mission.scouts, this.mission.scoutPower || 1, this.mission.allyFrames || ['scout']); // some missions bring a squadron
     if (this.mission && this.mission.corrupt) this.enterCorruption();
+    if (this.mission && this.mission.rift) this.enterRift();
     if (this.mission && this.mission.alien) { this.enterAlienPlanet(); this.addArmy(this.mech.pos.x, this.mech.pos.z, this.mech.yaw); }
     if (this.mission) { for (let i = 0; i < (this.mission.friends || 0); i++) this.spawnFriend(); for (let i = 0; i < (this.mission.walkers || 0); i++) this.spawnWalker(); }
     if (!['campaign', 'mission'].includes(this.mode)) {

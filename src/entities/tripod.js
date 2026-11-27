@@ -743,6 +743,11 @@ export class Tripod {
     }
     // the Emperor Pod also stomps a Jaeger that gets under its legs
     if (this.spec.stomp && T.kind === 'mech' && dist < this.footR * 1.5 && this.stompCd <= 0 && !this.feet.some((f) => f.t >= 0)) this.startStomp(T.ent.pos);
+    // Ultra Pod: fire bombs on top of everything else
+    if (this.spec.lob && this.los && dist < 720) {
+      this.lobCd = (this.lobCd ?? 4) - dt;
+      if (this.lobCd <= 0) { this.lobCd = this.spec.lob.every; for (let i = 0; i < this.spec.lob.count; i++) this.fireMortar(tp.clone().add(_a.set((Math.random() - 0.5) * 110, 0, (Math.random() - 0.5) * 110)), T, this.spec.lob.dmg); }
+    }
     // laser bursts
     if (this.burst > 0) {
       this.burstT -= dt;
@@ -761,7 +766,7 @@ export class Tripod {
   }
 
   // Mortar Pod: a slow fire bomb in a high arc. You can see it coming and step aside.
-  fireMortar(tp, T) {
+  fireMortar(tp, T, dmg = this.spec.mortar) {
     const g = this.game, G = 60;
     const from = this.model.body.position.clone(); from.y += 14 * this.spec.hull;
     const dx = tp.x - from.x, dz = tp.z - from.z, flat = Math.hypot(dx, dz);
@@ -770,7 +775,7 @@ export class Tripod {
     const v = new THREE.Vector3(dx / t, (floor - from.y + 0.5 * G * t * t) / t, dz / t);
     const speed = v.length();
     g.projectiles.fire({
-      pos: from, dir: v.multiplyScalar(1 / speed), speed, gravity: -G, damage: this.spec.mortar * (T.kind === 'kaiju' ? 3 : 1),
+      pos: from, dir: v.multiplyScalar(1 / speed), speed, gravity: -G, damage: dmg * (T.kind === 'kaiju' ? 3 : 1),
       owner: T.kind === 'kaiju' ? 'tripod' : 'kaiju', src: this, color: this.spec.mortarColor || '#ff8a2a', size: this.spec.acid ? 18 : 26, radius: 9, smash: 2, life: 7, acid: !!this.spec.acid,
     });
     g.fx.flash(from, '#ff8a2a', 4000, 0.2);

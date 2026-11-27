@@ -194,16 +194,17 @@ export class AlienShip {
 // The Core Reactor (campaign part 4): the heart of the tripods' base under the Earth. It does not move.
 // It wakes up guard tripods until it is destroyed.
 export class CoreReactor {
-  constructor(game, { x = 0, z = 0, generator = false, heart = false }) {
+  constructor(game, { x = 0, z = 0, generator = false, heart = false, pylon = false, gate = false }) {
     this.game = game;
     this.isTripod = true; this.isShip = true;
     this.generator = generator;   // part 5: a smaller green one that powers the planet's shield, and has no guards
     this.heart = heart;           // part 6: a purple Corruption Heart. No guards of its own.
-    this.type = heart ? 'heart' : generator ? 'generator' : 'reactor';
-    this.spec = heart ? { name: 'Corruption Heart', short: 'Heart' } : generator ? { name: 'Shield Generator', short: 'Generator' } : { name: 'The Core Reactor', short: 'Reactor' };
+    this.quiet = pylon || gate;   // part 7: Gate Pylons (blue) and the Dimension Gate itself. No guards of their own.
+    this.type = gate ? 'gate' : pylon ? 'pylon' : heart ? 'heart' : generator ? 'generator' : 'reactor';
+    this.spec = gate ? { name: 'THE DIMENSION GATE', short: 'Gate' } : pylon ? { name: 'Gate Pylon', short: 'Pylon' } : heart ? { name: 'Corruption Heart', short: 'Heart' } : generator ? { name: 'Shield Generator', short: 'Generator' } : { name: 'The Core Reactor', short: 'Reactor' };
     this.cat = generator || heart ? 3 : 4;
-    this.name = heart ? 'Corruption Heart' : generator ? 'Shield Generator' : 'Core Reactor';
-    this.maxHp = this.hp = heart ? 1000 : generator ? 1300 : 3200;
+    this.name = gate ? 'Dimension Gate' : pylon ? 'Gate Pylon' : heart ? 'Corruption Heart' : generator ? 'Shield Generator' : 'Core Reactor';
+    this.maxHp = this.hp = gate ? 4200 : pylon ? 900 : heart ? 1000 : generator ? 1300 : 3200;
     this.radius = 40; this.height = 60; this.scale = 1;
     this.pos = new THREE.Vector3(x, game.city.groundAt(x, z) + 75, z);
     this.vel = new THREE.Vector3();
@@ -211,7 +212,7 @@ export class CoreReactor {
     this.cargo = []; this.guardCd = 10; this.deadT = 0; this.hitFlash = 0;
     const root = this.root = new THREE.Group();
     this.mats = {
-      core: new THREE.MeshStandardMaterial({ color: '#000', emissive: heart ? '#b04aff' : generator ? '#3aff9a' : '#ff5a2a', emissiveIntensity: 3 }),
+      core: new THREE.MeshStandardMaterial({ color: '#000', emissive: gate ? '#c07dff' : pylon ? '#38a8ff' : heart ? '#b04aff' : generator ? '#3aff9a' : '#ff5a2a', emissiveIntensity: 3 }),
       ring: new THREE.MeshStandardMaterial({ color: '#8b93a6', metalness: 0.7, roughness: 0.35, emissive: '#2a1010', emissiveIntensity: 1 }),
       weak: new THREE.MeshStandardMaterial({ color: '#000', emissive: '#38d8ff', emissiveIntensity: 3 }),
     };
@@ -223,6 +224,17 @@ export class CoreReactor {
     root.position.copy(this.pos);
     game.scene.add(root);
     this.hitCache = [{ p: this.pos.clone(), r: 34, weak: false }, { p: new THREE.Vector3(), r: 11, weak: true, name: 'EYE' }];
+    if (gate) {
+      // the doorway to the new dimension: much bigger, with the new planets already showing inside it
+      const K = 2.8;
+      this.pos.y = game.city.groundAt(x, z) + 75 * K; root.position.copy(this.pos); root.scale.setScalar(K);
+      this.radius *= K; this.height *= K;
+      this.hitCache[0].p.copy(this.pos); this.hitCache[0].r *= K; this.hitCache[1].r *= K;
+      this.planets = new THREE.Group();
+      for (const [c, r, d] of [['#5ac8ff', 5, 16], ['#ffb04a', 3.5, 22], ['#7dffb0', 4, 12], ['#ff7df0', 2.6, 26]]) { const pl = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 8), new THREE.MeshBasicMaterial({ color: c })); pl.position.set(d, 0, 0); const arm = new THREE.Group(); arm.rotation.y = Math.random() * 6; arm.rotation.z = Math.random() - 0.5; arm.add(pl); this.planets.add(arm); }
+      root.add(this.planets);
+      this.mats.core.transparent = true; this.mats.core.opacity = 0.45;
+    }
   }
 
   get alive() { return !this.dead; }
@@ -237,6 +249,7 @@ export class CoreReactor {
       if (this.deadT > 3) this.removeMe = true;
       return;
     }
+    if (this.planets) this.planets.children.forEach((a, i) => { a.rotation.y += dt * (0.5 + i * 0.25); });
     this.rings.forEach((r, i) => { r.rotation.x = g.time * (0.6 + i * 0.3); r.rotation.y = g.time * (0.4 + i * 0.2) + i; });
     this.mats.core.emissiveIntensity = 2.6 + Math.sin(g.time * 4) * 0.8 + this.hitFlash * 3;
     // the eye follows the Jaeger
@@ -246,7 +259,7 @@ export class CoreReactor {
     // wake up a guard now and then
     this.guardCd -= dt;
     if (this.generator && Math.random() < 0.3) g.fx.glow(_a.copy(this.pos).setY(this.pos.y + 60 + Math.random() * 700), GREEN, 22, 0.5); // its beam feeds the shield
-    if (!this.generator && !this.heart && this.guardCd <= 0 && g.state === 'play') {
+    if (!this.generator && !this.heart && !this.quiet && this.guardCd <= 0 && g.state === 'play') {
       this.guardCd = 16;
       if (g.kaijus.filter((k) => !k.dead && !k.friendly && !k.isShip).length < (g.lowPower ? 3 : 4)) {
         const a = Math.random() * 6.28, d = 150 + Math.random() * 120;
@@ -259,6 +272,11 @@ export class CoreReactor {
 
   takeDamage(amount, point, dir, opts = {}) {
     if (this.dead) return;
+    if (this.locked) { // the Gate cannot be hurt while its pylons are standing
+      this.hitFlash = 1;
+      if (opts.source === 'mech' || opts.source === 'player') { this.game.hud.alert('THE GATE IS PROTECTED: DESTROY THE PYLONS', 2); }
+      return;
+    }
     this.hp -= amount;
     this.hitFlash = 1;
     if (point && amount > 0) this.game.fx.sparks(point, opts.weak ? 30 : 12, opts.weak ? 'blue' : 'spark');
