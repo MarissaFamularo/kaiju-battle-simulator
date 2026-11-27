@@ -4,8 +4,8 @@
 
    Left thumb: joystick to walk (push to the edge to sprint).
    Right thumb: drag anywhere to look and aim.
-   Buttons: left arm, right arm, jump. Ability tiles (drones, helicopters,
-   gunship, airstrike, missiles, eject) are tappable. Small buttons: pause, voice.
+   Buttons: left arm, right arm, jump, GET OUT / GET IN. Ability tiles (drones,
+   helicopters, gunship, airstrike, missiles, repair, truck) are tappable. Small buttons: pause, voice.
    Tapping also skips the drop cinematic and the landing.
 
    It drives the game's own input object (window.__kbs.input) directly. */
@@ -38,10 +38,15 @@
     '#kbs-fireL{width:112px;height:112px;right:150px;bottom:34px;border-color:rgba(255,120,80,.8)}',
     '#kbs-fireR{width:112px;height:112px;right:26px;bottom:120px;border-color:rgba(255,120,80,.8)}',
     '#kbs-jump{width:84px;height:84px;right:34px;bottom:18px}',
+    '#kbs-eject{width:84px;height:84px;right:160px;bottom:162px;border-color:rgba(125,255,176,.85);white-space:pre}',
     '.kbs-small{width:56px;height:56px;font-size:12px}',
     '#kbs-pause{left:18px;top:118px}#kbs-voice{left:84px;top:118px}',
     /* move HUD pieces out of the thumbs' way */
-    'body.kbs-touch #abilities{right:auto;left:50%;transform:translateX(-50%);bottom:12px;z-index:6}',
+    /* the tiles stay between the joystick and the fire buttons, and wrap upward if there are a lot */
+    'body.kbs-touch #abilities{left:200px;right:284px;bottom:12px;z-index:6;justify-content:center;flex-wrap:wrap-reverse;gap:6px}',
+    'body.kbs-touch #abilities .ab{width:66px;height:62px}',
+    'body.kbs-touch #abilities .ab .k{margin-top:7px;font-size:16px}',
+    'body.kbs-touch #abilities .ab .n{font-size:12px}',
     'body.kbs-touch #abilities .ab{cursor:pointer;touch-action:none}',
     'body.kbs-touch #abilities .ab.kbs-hide{display:none}',
     'body.kbs-touch #abilities .ab.down{background:rgba(56,216,255,.4)}',
@@ -74,6 +79,21 @@
     inp.lock = function () { this.locked = true; this.fallbackLook = false; if (this.onLockChange) this.onLockChange(true); };
     inp.unlock = function () { this.locked = false; };
 
+    // on-screen and spoken tips talk about the F key: say the button instead
+    function fixF(t) {
+      if (typeof t !== 'string') return t;
+      return t.replace(/press F to get out/gi, 'tap GET OUT').replace(/press F to climb in/gi, 'tap GET IN').replace(/and press F\./gi, 'and tap GET IN.');
+    }
+    if (app.hud) {
+      var h0 = app.hud.hint, a0 = app.hud.alert;
+      app.hud.hint = function (t) { return h0.call(this, fixF(t)); };
+      app.hud.alert = function (t, d, b) { return a0.call(this, fixF(t), d, b); };
+    }
+    if (app.nav && app.nav.say) {
+      var s0 = app.nav.say;
+      app.nav.say = function (id, t) { var args = [].slice.call(arguments); args[1] = fixF(t); return s0.apply(this, args); };
+    }
+
     var hint = document.querySelector('.title-hint');
     if (hint) hint.textContent = 'iPad: left thumb walks, right thumb aims. Turn your sound on!';
     var skip = document.getElementById('cine-skip');
@@ -88,6 +108,7 @@
     var fireL = el('div', 'kbs-fireL', 'kbs-btn', 'LEFT\nARM', root);
     var fireR = el('div', 'kbs-fireR', 'kbs-btn', 'RIGHT\nARM', root);
     var jump = el('div', 'kbs-jump', 'kbs-btn', 'JUMP', root);
+    var ejectB = el('div', 'kbs-eject', 'kbs-btn', 'GET\nOUT', root); // get out of / back into the Jaeger (F)
     var pauseB = el('div', 'kbs-pause', 'kbs-btn kbs-small', 'II', root);
     var voiceB = el('div', 'kbs-voice', 'kbs-btn kbs-small', 'VOICE', root);
     fireL.style.whiteSpace = fireR.style.whiteSpace = 'pre';
@@ -175,6 +196,7 @@
     holdButton(fireL, mL[0], mL[1], true);
     holdButton(fireR, mR[0], mR[1], true);
     holdButton(jump, function () { press('Space'); }, function () { release('Space'); }, false);
+    holdButton(ejectB, function () { tap('KeyF'); }, function () {}, false);
     holdButton(pauseB, function () { if (app.state === 'play') app.pause(); }, function () {}, false);
     holdButton(voiceB, function () { tap('KeyV'); }, function () {}, false);
 
@@ -190,7 +212,7 @@
     function tagTiles() {
       var ab = app.hud && app.hud.abEls;
       if (!ab) return;
-      for (var id in ab) ab[id].el.classList.toggle('kbs-hide', id === 'L' || id === 'R');
+      for (var id in ab) ab[id].el.classList.toggle('kbs-hide', id === 'L' || id === 'R' || id === 'eject'); // those three have their own big buttons
     }
     if (abBox) {
       abBox.style.pointerEvents = 'auto';
@@ -224,12 +246,14 @@
     var wasPlay = false;
     (function watch() {
       var play = app.state === 'play';
+      var out = !!(app.game && app.game.pilot), lbl = out ? 'GET\nIN' : 'GET\nOUT';
+      if (ejectB.textContent !== lbl) ejectB.textContent = lbl;
       if (play !== wasPlay) {
         document.body.classList.toggle('kbs-play', play);
         if (!play) {
           endStick(); lookId = null; last = {};
           inp.keys.clear(); inp.buttons.clear();
-          [fireL, fireR, jump].forEach(function (b) { b.classList.remove('down'); });
+          [fireL, fireR, jump, ejectB].forEach(function (b) { b.classList.remove('down'); });
         }
         wasPlay = play;
       }

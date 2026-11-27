@@ -138,6 +138,14 @@ export const TRIPODS = {
     big: 34, bigEvery: 6,                   // big laser
     range: 620, cone: 0.3, lose: 12,        // advanced scanner: sees farther and wider, forgets slower
   },
+  // Patrick's Emperor Pod: an Uber Pod and a Harvester in one, and much taller than any other tripod.
+  emperor: {
+    id: 'emperor', name: 'Emperor Pod', short: 'Emperor', size: 2, hull: 1.7, radar: 4,
+    hp: 3800, speed: 20, immune: true, harvest: true, stomp: 95, crown: true,
+    laser: 4, fireEvery: 2.4, minigun: 8,
+    big: 34, bigEvery: 6,
+    range: 620, cone: 0.32, lose: 14,
+  },
 };
 
 // Invasion mode waves: numbers are kaiju categories, 'T' is an attacker tripod.

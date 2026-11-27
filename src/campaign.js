@@ -1,6 +1,7 @@
 // The Chapter 2 campaign (docs/chapter-2-design.md). Patrick asked for "a campaign with
 // a bunch of missions" and left the list to Claude, so these are built from his pieces:
 // tripods, hiding, camps, survivors, bunkers, the Harvester, the crater and the Uber Pod.
+// Mission 8, the Emperor Pod, is Patrick's own idea (added 2026-11-27).
 //
 // Each mission:
 //   title, brief     shown in the hangar and read by the navigator
@@ -119,7 +120,17 @@ export const MISSIONS = [
     goal: () => 'Destroy the Uber Pod (Energy Sword or Laser Blaster only)',
     done: (g, s) => s.sent && g.kaijus.some((k) => k.type === 'uber' && k.dead),
     failed: () => null,
-    win: 'You destroyed the Uber Pod! The invasion is broken, and the survivors can come out. You did it, pilot!',
+    win: 'You destroyed the Uber Pod! But the lightning is not stopping. Something even bigger is coming.',
+    needsSpecial: true,
+  },
+  {
+    title: 'The Emperor Pod',
+    brief: 'The leader of the invasion: the Emperor Pod. It is taller than every other tripod. It shoots like an Uber Pod, harvests like a Harvester, and stomps. Destroy it before it takes 10 survivors. Only an Energy Sword or a Laser Blaster can hurt it.',
+    start(g, s) { g.queueTripod('emperor'); s.sent = true; },
+    goal: (g) => `Destroy the Emperor Pod (it has taken ${g.camps.harvested}/10)`,
+    done: (g, s) => s.sent && g.kaijus.some((k) => k.type === 'emperor' && k.dead),
+    failed: (g) => (g.camps.harvested >= 10 ? 'The Emperor Pod filled its cage with survivors.' : null),
+    win: 'You destroyed the Emperor Pod! The invasion is broken, and the survivors can come out. You did it, pilot!',
     needsSpecial: true,
   },
 ];

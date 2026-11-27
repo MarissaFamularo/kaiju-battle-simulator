@@ -49,7 +49,7 @@ A game by Patrick. Build your own Jaeger, drop from a space station into a big 3
 
 ### iPad / touch screens
 
-Touch controls turn on by themselves on touch screens (`public/touch-controls.js`). Left thumb is a joystick (push to the edge to sprint), right thumb drags to aim, and there are LEFT ARM, RIGHT ARM and JUMP buttons. The ability tiles at the bottom can be tapped. Force touch mode on or off with `?touch=1` or `?touch=0` in the URL. Hold the iPad sideways.
+Touch controls turn on by themselves on touch screens (`public/touch-controls.js`). Left thumb is a joystick (push to the edge to sprint), right thumb drags to aim, and there are LEFT ARM, RIGHT ARM, JUMP and GET OUT / GET IN buttons. The ability tiles at the bottom can be tapped. Force touch mode on or off with `?touch=1` or `?touch=0` in the URL. Hold the iPad sideways.
 
 ### Chapter 2: the Tripod Invasion (in progress)
 
@@ -72,7 +72,8 @@ Patrick's full design is in `docs/chapter-2-design.md`. Built so far:
 - **Laser Blaster:** a new arm weapon. Twin barrels, fast red bolts; hold the button to keep firing.
 - **Harvester** (campaign only). It walks to the survivor camps and the animal herds and beams them up into the cage on its back. Captured survivors cannot be saved. It has no guns: it fights by lifting a leg and stomping you. It can grab the pilot on foot, so stay in your Jaeger.
 - **Uber Pod.** Taller, with longer legs and weapons stacked on its head: laser mini guns and a big laser. Its scanner sees farther and wider and it comes straight for you. Ordinary weapons only leave a red hot mark that cools down. Only the **Energy Sword** and **Laser Blaster** hurt it. It arrives with about 20 lightning strikes.
-- **CAMPAIGN:** seven missions on the huge map, unlocked one at a time and saved in the browser: First Contact, Supply Run, Rescue, The Harvester, Hold the Bunker, Monsters of the Crater, The Uber Pod. The mission list is in `src/campaign.js`.
+- **Emperor Pod.** Patrick's boss: an Uber Pod and a Harvester in one, twice as tall as an Attacker, with gold armor and a crown. It shoots, harvests and stomps. Sword and Laser Blaster only. `Y` summons one in Free Smash.
+- **CAMPAIGN:** eight missions on the huge map, unlocked one at a time and saved in the browser: First Contact, Supply Run, Rescue, The Harvester, Hold the Bunker, Monsters of the Crater, The Uber Pod, The Emperor Pod. The mission list is in `src/campaign.js`.
 
 - **The opening story.** The first time you launch a chapter 2 mode (Campaign, Free Play or Invasion) you see: the Earth; an unknown ship hitting Station Aegis; the Jaeger ejecting just before the hit and falling to the planet; a fight with a kaiju in the ruined city; twenty lightning strikes on one spot; and a tripod rising. Then the game starts with your Jaeger already on the ground. Space or a tap skips it. Later launches show a short drop instead. Code: `src/scenes/invasionIntro.js`.
 

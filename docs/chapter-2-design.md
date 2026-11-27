@@ -36,6 +36,13 @@ Kaiju and tripods also **fight each other**.
    Normal weapons do **no damage**: they only leave a **red hot mark that the tripod
    cools down**. Only the special Jaeger weapons hurt it: **Energy Swords and Laser Blasters**.
 
+4. **Emperor Pod** (added by Patrick 2026-11-27, after playing). **Very tall: taller than
+   every other tripod.** It is **basically an Uber Pod and a Harvester combined.**
+   **(Claude's calls:** twice the height of an Attacker, gold armor and a crown; it has the
+   Uber Pod's lasers and immunity, harvests camps and animals while it hunts, and stomps a
+   Jaeger that gets under its legs; it does not grab a pilot on foot; campaign mission 8,
+   rare in Free Play, Y summons one in Free Smash.)
+
 ### Little black aliens
 - Come out of the capsule. **Don't make them too scary.**
 - They **climb up your Jaeger** and **drain your armor by throwing off pieces.**
@@ -87,4 +94,5 @@ Kaiju and tripods also **fight each other**.
 2. The huge new map with free play. **(Built 2026-11-27: `src/world/wasteland.js`, FREE PLAY mode.)**
 3. Survivor camps, resources, bunkers, carrying survivors. **(Built 2026-11-27: `src/entities/camps.js`. Claude's calls: R repairs with 1 scrap + 1 energy; survivors board when the Jaeger stands by a camp; 4 calls a truck; people at a stomped camp run away unhurt.)**
 4. Harvester, Uber Pod, Laser Blaster weapon, campaign missions. **(Built 2026-11-27. Mission list is Claude's call, in `src/campaign.js`: First Contact, Supply Run, Rescue, The Harvester, Hold the Bunker, Monsters of the Crater, The Uber Pod.)**
+   Mission 8, The Emperor Pod, added the same day.
 5. The new space intro. **(Built 2026-11-27: `src/scenes/invasionIntro.js`, about 47 seconds, shown on the first chapter 2 launch each visit.)**

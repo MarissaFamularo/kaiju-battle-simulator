@@ -88,7 +88,7 @@ export class Game {
     this.mission = mode === 'campaign' ? MISSIONS[this.missionIdx] : null;
     this.ms = { t: 0, started: false, s: {}, gaveLaser: false };
     if (this.mission && this.mission.needsSpecial && !['sword', 'laser'].includes(cfg.left) && !['sword', 'laser'].includes(cfg.right)) {
-      cfg.right = 'laser'; // nothing else can hurt an Uber Pod
+      cfg.right = 'laser'; // nothing else can hurt an Uber Pod or the Emperor Pod
       this.ms.gaveLaser = true;
     }
     if (this.dirty || kind !== this.worldKind) this.buildWorld(kind);
@@ -256,7 +256,7 @@ export class Game {
       if (farFromMe && farFromPlant) break;
     }
     // the Uber Pod gets the full 20 lightning strikes
-    this.warnings.push({ tripod: true, type, t: type === 'uber' ? 13 : 8.5, quick: type === 'uber', strikeT: 0.2, strikes: 0, x, z, zone: new THREE.Vector3(x, 0, z), radius: 90 });
+    this.warnings.push({ tripod: true, type, t: type === 'emperor' ? 15 : type === 'uber' ? 13 : 8.5, quick: type === 'uber' || type === 'emperor', strikeT: 0.2, strikes: 0, x, z, zone: new THREE.Vector3(x, 0, z), radius: 90 });
     audio.play('alarm');
     this.hud.alert('LIGHTNING STORM AHEAD', 5, true);
     this.nav.say('tripodWarn', 'Lightning keeps hitting the same spot ahead of you! Something is coming up out of the ground. Hide behind a building so its scanner light cannot find you!', 3, 0);
@@ -268,6 +268,7 @@ export class Game {
     this.kaijus.push(t);
     this.hud.alert(`${TRIPODS[w.type].name.toUpperCase()} RISING`, 4, true);
     if (w.type === 'harvester') this.nav.say('harvRise', `That is a Harvester! It is going after the survivor camps and the animals. Catch it before it gets there, and watch out for its legs: it stomps!`, 3, 0);
+    else if (w.type === 'emperor') this.nav.say('emperorRise', `The Emperor Pod! It is taller than every other tripod. It has the Uber Pod's lasers AND the Harvester's cage, and it stomps. Only your Energy Sword or Laser Blaster can hurt it!`, 3, 0);
     else if (w.type === 'uber') this.nav.say('uberRise', `An Uber Pod! Look at the size of it. Stacked lasers and long legs. Remember: only your Energy Sword or Laser Blaster can hurt it!`, 3, 0);
     else this.nav.say('tripodRise', `A tripod! Legs first, then it pushes itself up. That is ${t.name}. It can only attack if its scanner light finds you. Its weak spot is the glowing core underneath.`, 3, 0);
     return t;
@@ -381,6 +382,7 @@ export class Game {
       this.queueKaiju(cat);
     }
     if (input.pressed('KeyT') && this.mode === 'smash' && !this.warnings.some((w) => w.tripod)) this.queueTripod();
+    if (input.pressed('KeyY') && this.mode === 'smash' && !this.warnings.some((w) => w.tripod)) this.queueTripod('emperor');
   }
 
   toggleEject() {
@@ -571,7 +573,7 @@ export class Game {
       if (busy < 3) {
         fp.count++;
         fp.t = 40 + Math.random() * 30;
-        if (Math.random() < 0.5) this.queueTripod(fp.count > 6 && Math.random() < 0.25 ? 'uber' : 'attacker'); // an Uber Pod now and then, later on
+        if (Math.random() < 0.5) this.queueTripod(fp.count > 9 && Math.random() < 0.15 && !this.kaijus.some((k) => k.type === 'emperor' && !k.dead) ? 'emperor' : fp.count > 6 && Math.random() < 0.25 ? 'uber' : 'attacker'); // an Uber Pod now and then, later on; the Emperor Pod is rare
         else this.queueKaiju(Math.min(5, 1 + Math.floor(fp.count / 3) + (Math.random() < 0.3 ? 1 : 0)));
         audio.intensity = Math.min(1, 0.4 + fp.count * 0.04);
       } else fp.t = 10;

@@ -122,13 +122,24 @@ function buildTripod(spec) {
   }
   if (spec.harvest) {
     // Harvester: a cage on its back and a beam emitter underneath, no guns
-    gun.visible = false;
+    if (!spec.immune) gun.visible = false;
     const cage = new THREE.Group(); cage.position.set(0, 2, -14); body.add(cage);
     for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; M(new THREE.CylinderGeometry(0.3, 0.3, 11, 5), mats.dark, Math.cos(a) * 5.5, 0, Math.sin(a) * 5.5, cage); }
     for (const y of [-5.5, 5.5]) { const ring = M(new THREE.TorusGeometry(5.5, 0.45, 6, 18), mats.trim, 0, y, 0, cage); ring.rotation.x = Math.PI / 2; }
     M(new THREE.SphereGeometry(2.2, 12, 8), mats.strip, 0, 0, 0, cage).castShadow = false;
     emitter = new THREE.Object3D(); emitter.position.set(0, -8, 4); body.add(emitter);
     M(new THREE.ConeGeometry(3.2, 4, 12, 1, true), mats.strip, 0, -9.5, 4, body).castShadow = false;
+  }
+  if (spec.crown) {
+    // Emperor Pod: gold armor and a crown of spikes
+    mats.trim.color.set('#e0b548'); mats.trim.emissive.set('#3a2a08');
+    mats.crown = new THREE.MeshStandardMaterial({ color: '#ffd45a', metalness: 0.8, roughness: 0.25, emissive: '#b07a10', emissiveIntensity: 1.1 });
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const sp = M(new THREE.ConeGeometry(1.5, i % 2 ? 7 : 10, 6), mats.crown, Math.sin(a) * 10.5, 6.5 + (i % 2 ? 0 : 1.5), Math.cos(a) * 10.5 - 1, body);
+      sp.rotation.set(Math.cos(a) * 0.25, 0, -Math.sin(a) * 0.25);
+    }
+    const band = M(new THREE.TorusGeometry(10.5, 0.8, 6, 30), mats.crown, 0, 3.6, -1, body); band.rotation.x = Math.PI / 2;
   }
   body.scale.setScalar(spec.hull);
   const eye = new THREE.Object3D(); eye.position.set(0, 0, 7.5); head.add(eye);
@@ -181,7 +192,7 @@ export class Tripod {
     this.isTripod = true;
     this.type = type;
     this.spec = TRIPODS[type];
-    this.cat = 2; // radar dot size
+    this.cat = this.spec.radar || 2; // radar dot size
     this.name = `${this.spec.short} ${NAMES[nameIdx++ % NAMES.length]}`;
     const S = this.spec.size;
     this.stand = STAND * S; this.l1 = L1 * S; this.l2 = L2 * S; this.footR = FOOT_R * S; // bigger types stand taller
@@ -195,7 +206,8 @@ export class Tripod {
     this.knock = new THREE.Vector3();
     const ref = game.mech ? game.mech.pos : new THREE.Vector3();
     this.yaw = Math.atan2(ref.x - x, ref.z - z) + (Math.random() - 0.5) * 1.6;
-    this.bodyY = BURIED;
+    this.buried = BURIED * Math.max(1, this.spec.hull * 1.25 - 0.3); // big hulls start deeper so nothing pokes out
+    this.bodyY = this.buried;
     this.tilt = 0;
     this.state = 'emerge';
     this.stateT = 0;
@@ -209,7 +221,7 @@ export class Tripod {
     this.bigCd = 3; this.stompCd = 2; this.harvestT = 0;
     this.root = this.model.root;
     game.scene.add(this.root);
-    this.feet = LEG_ANGLES.map(() => ({ pos: new THREE.Vector3(x, this.pos.y + BURIED, z), from: new THREE.Vector3(), to: new THREE.Vector3(), t: -1, planted: false }));
+    this.feet = LEG_ANGLES.map(() => ({ pos: new THREE.Vector3(x, this.pos.y + this.buried, z), from: new THREE.Vector3(), to: new THREE.Vector3(), t: -1, planted: false }));
     this.stepCd = 0;
     this.headYaw = 0;
     this.lit = 0;           // 0 = lights off, 1 = on
@@ -225,7 +237,7 @@ export class Tripod {
     this.deadT = 0;
     this.hitCache = [
       { p: new THREE.Vector3(), r: 13 * this.spec.hull, weak: false },  // hull
-      { p: new THREE.Vector3(), r: 5.5, weak: true, name: 'CORE' },  // power core underneath
+      { p: new THREE.Vector3(), r: 5.5 * Math.max(1, this.spec.hull * 0.8), weak: true, name: 'CORE' },  // power core underneath
       { p: new THREE.Vector3(), r: 7, weak: false },   // scanner head
       { p: new THREE.Vector3(), r: 4, weak: false }, { p: new THREE.Vector3(), r: 4, weak: false }, { p: new THREE.Vector3(), r: 4, weak: false }, // knees
     ];
@@ -292,7 +304,7 @@ export class Tripod {
       const rest = this.restFoot(i, _a);
       const e = k * k * (3 - 2 * k);
       f.pos.set(this.pos.x + (rest.x - this.pos.x) * e, 0, this.pos.z + (rest.z - this.pos.z) * e);
-      f.pos.y = k >= 1 ? rest.y : this.pos.y + BURIED * (1 - Math.min(1, k * 3)) + Math.sin(k * Math.PI) * 40;
+      f.pos.y = k >= 1 ? rest.y : this.pos.y + this.buried * (1 - Math.min(1, k * 3)) + Math.sin(k * Math.PI) * 40;
       if (k > 0 && k < 1 && Math.random() < 0.4) g.fx.dust(_b.set(this.pos.x + (rest.x - this.pos.x) * 0.3, this.pos.y + 2, this.pos.z + (rest.z - this.pos.z) * 0.3), 0.7, 2);
       if (k >= 1 && !f.planted) {
         f.planted = true;
@@ -303,14 +315,14 @@ export class Tripod {
     if (t > LEGS) {
       const k = Math.min(1, (t - LEGS) / RISE);
       const e = 1 - (1 - k) ** 3;
-      if (this.bodyY === BURIED) {
+      if (this.bodyY === this.buried) {
         const p = this.pos.clone().setY(this.pos.y + 4);
         g.fx.groundDust(p, 70, 40);
         g.city.impulseDebris(p, 80, 40);
         audio.play('explosion', p, 0.8);
         g.shake(1, this.pos);
       }
-      this.bodyY = BURIED + 0.01 + (this.stand - BURIED) * e;
+      this.bodyY = this.buried + 0.01 + (this.stand - this.buried) * e;
       if (Math.random() < 0.5) g.fx.dust(_b.set(this.pos.x + (Math.random() - 0.5) * 30, this.pos.y + 2, this.pos.z + (Math.random() - 0.5) * 30), 0.8, 2);
       if (k >= 1) { this.emerging = false; this.setState('boot'); }
     }
@@ -319,7 +331,7 @@ export class Tripod {
   updateBoot(dt) {
     // lights flicker on
     this.lit = this.stateT > 1 ? 1 : (Math.sin(this.stateT * 40) > 0 ? 1 : 0.1);
-    if (this.stateT > 1.2) { this.lit = 1; this.setState(this.spec.harvest ? 'harvest' : 'search'); }
+    if (this.stateT > 1.2) { this.lit = 1; this.setState(this.spec.harvest && !this.spec.immune ? 'harvest' : 'search'); }
   }
 
   // Is this point inside the scanner light, with nothing in the way?
@@ -368,6 +380,17 @@ export class Tripod {
     // kaiju and tripods fight each other
     const k = this.nearestKaiju(280);
     if (k) { this.target = { kind: 'kaiju', ent: k }; this.lostT = 0; this.setState('attack'); return; }
+    // the Emperor Pod harvests while it hunts
+    if (this.spec.harvest) {
+      const prey = g.camps ? g.camps.nearestPrey(this.pos.x, this.pos.z) : null;
+      if (prey) {
+        if (this.moveToward(prey.pos, this.speed, dt, 34) < 48 + this.footR * 0.3) {
+          this.harvestT += dt;
+          if (this.harvestT > 1.3) { this.harvestT = 0; this.beamUp(g.camps.harvest(prey, this)); }
+        }
+        return;
+      }
+    }
     // patrol: wander around near the Jaeger, sweeping the light
     if (!this.waypoint) {
       const ref = m ? m.pos : this.pos;
@@ -462,8 +485,10 @@ export class Tripod {
     const dist = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z);
     const want = this.spec.immune ? 150 : T.kind === 'kaiju' ? 170 : 210;
     if (dist > want + 50 || !this.los) this.moveToward(tp, this.speed * 1.15, dt, 0, true);
-    else if (dist < want - 80) this.moveToward(_a.copy(this.pos).multiplyScalar(2).sub(tp), this.speed * 0.8, dt, 0, true);
+    else if (dist < want - 80 && !this.spec.stomp) this.moveToward(_a.copy(this.pos).multiplyScalar(2).sub(tp), this.speed * 0.8, dt, 0, true);
     else { this.vel.multiplyScalar(Math.max(0, 1 - dt * 3)); this.pos.addScaledVector(this.vel, dt); }
+    // the Emperor Pod also stomps a Jaeger that gets under its legs
+    if (this.spec.stomp && T.kind === 'mech' && dist < this.footR * 1.5 && this.stompCd <= 0 && !this.feet.some((f) => f.t >= 0)) this.startStomp(T.ent.pos);
     // laser bursts
     if (this.burst > 0) {
       this.burstT -= dt;
@@ -714,7 +739,7 @@ export class Tripod {
       // only the Energy Sword and Laser Blaster get through
       amount = 0;
       this.heatMark(point);
-      if (opts.source === 'mech' || opts.source === 'player') g.nav.say('uberImmune', 'That only left a red hot mark, and it is already cooling down! Only an Energy Sword or a Laser Blaster can hurt an Uber Pod.', 3, 20);
+      if (opts.source === 'mech' || opts.source === 'player') g.nav.say('uberImmune', 'That only left a red hot mark, and it is already cooling down! Only an Energy Sword or a Laser Blaster can hurt ' + (this.type === 'emperor' ? 'the Emperor Pod.' : 'an Uber Pod.'), 3, 20);
     }
     this.hp -= amount;
     this.hitFlash = 1;
