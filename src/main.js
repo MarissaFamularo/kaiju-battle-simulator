@@ -270,8 +270,9 @@ class App {
     if (win && s.campaign && s.campaign.ending && !s.afterOutro) {
       this.state = 'outro';
       this.input.unlock();
-      this.cine = s.campaign.ending === 'message' ? this.alienMsg : this.outro; // part 4 ends with a message from the aliens
-      this.cine.start(() => this.showEnd(win, { ...s, afterOutro: true }), s.campaign.ending === 'bomb' ? 'bomb' : 'planet');
+      const end = s.campaign.ending;
+      this.cine = end === 'message' ? this.alienMsg : end === 'peace' ? this.corrupted : this.outro; // part 4: a message; part 10: peace
+      this.cine.start(() => this.showEnd(win, { ...s, afterOutro: true }), end === 'bomb' ? 'bomb' : end === 'peace' ? 'healed' : 'planet');
       return;
     }
     this.state = 'end';
@@ -281,7 +282,7 @@ class App {
     end.classList.toggle('end-defeat', !win);
     const camp = s.campaign;
     $('end-title').textContent = win ? (camp ? (camp.last ? 'CAMPAIGN COMPLETE' : 'MISSION COMPLETE') : 'VICTORY') : s.title;
-    $('end-sub').textContent = win ? (camp ? (camp.last ? `${this.hangar.cfg.name} broke the Dimension Gate. But one Ultra Pod got through first...` : `Mission ${camp.n}: ${camp.title}`) : `${this.hangar.cfg.name} saved the city!`) : s.sub;
+    $('end-sub').textContent = win ? (camp ? (camp.last ? `The war is over. You saved the Earth, pilot!` : `Mission ${camp.n}: ${camp.title}`) : `${this.hangar.cfg.name} saved the city!`) : s.sub;
     $('end-stats').innerHTML = [
       ['Kaiju defeated', s.kills - (s.tripods || 0)], ['Tripods destroyed', s.tripods || 0], ...(s.saved !== null && s.saved !== undefined ? [['Survivors saved', s.saved]] : []), ['Weak spot hits', s.weak], ['Buildings smashed', s.buildings], ['Damage dealt', s.damage],
       ['Waves reached', s.wave], ['Power plant', `${s.plant}%`], ['Battle time', s.time],

@@ -114,6 +114,9 @@ export class Game {
     this.waveState = 'pre';
     this.waveTimer = 14;
     this.spawnQueue = [];
+    const mega = (this.mission && this.mission.mega) || (mode !== 'campaign' && this.app.hangar && this.app.hangar.settings.mega); // the hangar switch works outside the story
+    this.megaOn = !!mega;
+    if (mega) cfg = { ...cfg, mega: 5, name: 'MEGA MECH' };
     this.mech = new Mech(this, cfg);
     this.mech.setPosition(LAND.x, 900, LAND.z);
     this.mech.yaw = Math.PI;
@@ -333,20 +336,36 @@ export class Game {
 
   // Part 7: the tripods are tearing open a new dimension. A purple rift in the sky with new planets inside it.
   // this.riftK (0 to 1) is how far open it is.
-  enterRift() {
+enterRift(count = 1, unstable = false) {
     const noFog = { fog: false, depthWrite: false };
-    const rift = this.rift = new THREE.Group();
-    rift.add(new THREE.Mesh(new THREE.CircleGeometry(1000, 40), new THREE.MeshBasicMaterial({ color: '#12041f', side: THREE.DoubleSide, ...noFog })));
-    const edge = new THREE.Mesh(new THREE.RingGeometry(980, 1120, 48), new THREE.MeshBasicMaterial({ color: '#c07dff', side: THREE.DoubleSide, transparent: true, opacity: 0.9, ...noFog })); rift.add(edge);
-    const glow = new THREE.Mesh(new THREE.RingGeometry(1100, 1500, 48), new THREE.MeshBasicMaterial({ color: '#7d3aff', side: THREE.DoubleSide, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, ...noFog })); rift.add(glow);
-    this.riftPlanets = [];
-    for (const [c, r, x, y] of [['#5ac8ff', 230, -380, 160], ['#ffb04a', 150, 330, 300], ['#7dffb0', 190, 260, -330], ['#ff7df0', 110, -300, -380], ['#e8e0ff', 70, 20, 30]]) {
-      const pl = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), new THREE.MeshBasicMaterial({ color: c, ...noFog })); pl.position.set(x, y, 40); rift.add(pl); this.riftPlanets.push(pl);
+    const spots = [[1500, 3600, -4200], [-3200, 3000, -3000], [3600, 2800, 1200], [-1200, 4200, 3600], [-4200, 2600, 600]];
+    this.riftList = []; this.riftUnstable = unstable;
+    const all = this.rift = new THREE.Group();
+    for (let n = 0; n < count; n++) {
+      const rift = new THREE.Group();
+      rift.add(new THREE.Mesh(new THREE.CircleGeometry(1000, 40), new THREE.MeshBasicMaterial({ color: '#12041f', side: THREE.DoubleSide, ...noFog })));
+      rift.add(new THREE.Mesh(new THREE.RingGeometry(980, 1120, 48), new THREE.MeshBasicMaterial({ color: n % 2 ? '#ff7d5a' : '#c07dff', side: THREE.DoubleSide, transparent: true, opacity: 0.9, ...noFog })));
+      rift.add(new THREE.Mesh(new THREE.RingGeometry(1100, 1500, 48), new THREE.MeshBasicMaterial({ color: '#7d3aff', side: THREE.DoubleSide, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, ...noFog })));
+      const planets = [];
+      for (const [c, r, x, y] of [['#5ac8ff', 230, -380, 160], ['#ffb04a', 150, 330, 300], ['#7dffb0', 190, 260, -330], ['#ff7df0', 110, -300, -380], ['#e8e0ff', 70, 20, 30]]) {
+        const pl = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), new THREE.MeshBasicMaterial({ color: c, ...noFog })); pl.position.set(x, y, 40); rift.add(pl); planets.push(pl);
+      }
+      rift.position.set(...spots[n % spots.length]);
+      rift.lookAt(0, 300, 0);
+      rift.userData = { planets, size: n === 0 ? 1 : 0.55 + (n % 3) * 0.12, phase: n * 1.7 };
+      all.add(rift); this.riftList.push(rift);
     }
-    rift.position.set(1500, 3600, -4200);
-    rift.lookAt(0, 300, 0);
     this.riftK = 0.35;
-    (this.sky || this.scene).add(rift);
+    (this.sky || this.scene).add(all);
+  }
+
+  // Parts 8 and 9: the rifts are not stable. Purple lightning comes down near you, out of the rifts.
+  updateRiftStorm(dt) {
+    this.stormT = (this.stormT ?? 4) - dt;
+    if (this.stormT > 0 || !this.mech) return;
+    this.stormT = 3 + Math.random() * 4;
+    const a = Math.random() * 6.28, d = 150 + Math.random() * 380;
+    lightningStrike(this, this.mech.pos.x + Math.cos(a) * d, this.mech.pos.z + Math.sin(a) * d, Math.random() < 0.3);
   }
 
   // Part 5: "hundreds of mechs... and they are all on the planet". The army that the Venture Stars dropped
@@ -609,7 +628,12 @@ export class Game {
       this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
       this.skyShips.rotation.y += rawDt * (this.shieldDome ? 0.004 : 0.012);
       this.skyWreck.rotation.y += rawDt * (this.shieldDome ? 0.001 : 0.01);
-      if (this.rift) { const k = 0.25 + this.riftK * 0.85 + Math.sin(this.time * 2) * 0.015; this.rift.scale.set(k, k, 1); this.riftPlanets.forEach((p, i) => { p.position.z = 40 + Math.sin(this.time * 0.6 + i) * 30; }); }
+      if (this.rift) for (const r of this.riftList) {
+        const u = r.userData, wob = this.riftUnstable ? Math.sin(this.time * 7 + u.phase) * 0.06 + (Math.random() < 0.04 ? 0.12 : 0) : Math.sin(this.time * 2) * 0.015;
+        const k = Math.max(0.01, (0.25 + this.riftK * 0.85) * u.size + wob);
+        r.scale.set(k, k, 1);
+        u.planets.forEach((p, i) => { p.position.z = 40 + Math.sin(this.time * 0.6 + i + u.phase) * 30; if (this.riftUnstable) p.position.x += Math.sin(this.time * 1.3 + i * 2 + u.phase) * 0.9; }); // the planets drift toward each other
+      }
       if (this.shieldDome) { this.shieldDome.rotation.y += rawDt * 0.006; this.shieldDome.material.opacity += ((this.shieldDown ? 0 : 0.3 + Math.sin(this.time * 1.5) * 0.08) - this.shieldDome.material.opacity) * Math.min(1, rawDt * 1.5); }
     }
     if (playing || this.state === 'over') this.computeAim();
@@ -787,7 +811,8 @@ export class Game {
     // scout Jaegers help out everywhere except the story modes
     if (this.mission && this.mission.scouts) this.scouts.deploy(this.mission.scouts, this.mission.scoutPower || 1, this.mission.allyFrames || ['scout']); // some missions bring a squadron
     if (this.mission && this.mission.corrupt) this.enterCorruption();
-    if (this.mission && this.mission.rift) this.enterRift();
+    if (this.mission && this.mission.rift) this.enterRift(this.mission.rift === true ? 1 : this.mission.rift, !!this.mission.storm);
+    if (this.megaOn && this.scene.fog) { this.scene.fog.near = 1100; this.scene.fog.far = 7000; } // you are 5 times bigger, so you see 5 times farther
     if (this.mission && this.mission.alien) { this.enterAlienPlanet(); this.addArmy(this.mech.pos.x, this.mech.pos.z, this.mech.yaw); }
     if (this.mission) { for (let i = 0; i < (this.mission.friends || 0); i++) this.spawnFriend(); for (let i = 0; i < (this.mission.walkers || 0); i++) this.spawnWalker(); }
     if (!['campaign', 'mission'].includes(this.mode)) {
@@ -872,6 +897,7 @@ export class Game {
   // Campaign: run the current mission and watch for a win or a loss.
   updateCampaign(dt) {
     const ms = this.ms, M = this.mission;
+    if (M.storm && ms.started) this.updateRiftStorm(dt);
     ms.t += dt;
     if (!ms.started) {
       if (ms.t < 5) return;

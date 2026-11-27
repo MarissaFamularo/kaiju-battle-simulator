@@ -353,6 +353,21 @@ Object.assign(TRIPODS, {
   },
 });
 
+// Parts 8 and 9: THE COLLIDING REALITIES, and part 10: THE END OF THE WAR (Patrick, 2026-11-27).
+Object.assign(TRIPODS, {
+  // a tripod from another reality: its colors keep changing and it blinks around
+  glitch: {
+    id: 'glitch', name: 'Glitch Pod', short: 'Glitch', size: 1.05, hull: 1, tint: '#ffffff', glitch: true,
+    hp: 750, speed: 18, laser: 7, fireEvery: 2.4, range: 320, cone: 0.22, blink: 5,
+    intro: 'A Glitch Pod! It came out of the rift, from another reality. Its colors keep changing, and it keeps jumping from place to place.',
+  },
+  ultraPrime: {
+    ...TRIPODS.ultra, id: 'ultraPrime', name: 'ULTRA POD PRIME', short: 'Ultra Prime', boss: '#ffd23a', tint: '#3a1010',
+    hp: 7500, shield: 800,
+    intro: 'ULTRA POD PRIME! The last and strongest one. This is the final battle of the whole war. You can do it, pilot!',
+  },
+});
+
 // Invasion mode waves: numbers are kaiju categories, 'T' is an attacker tripod.
 export const INVASION_WAVES = [
   ['T'],

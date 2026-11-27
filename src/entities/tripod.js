@@ -360,6 +360,7 @@ export class Tripod {
       for (const key of ['hull', 'trim', 'dark']) { const mt = m.mats[key]; mt.transparent = this.fade < 0.98; mt.opacity = this.fade; }
       m.mats.strip.emissiveIntensity = 2.2 * this.fade;
     }
+    if (sp.glitch && !this.dead) m.mats.hull.color.setHSL((g.time * 0.9 + this.pos.x * 0.01) % 1, 0.9, 0.55); // colors from another reality
     if (sp.grow && !this.dead && !this.emerging) {
       // a Baby Tripod that is left alone grows up
       this.growT = (this.growT || 0) + dt;

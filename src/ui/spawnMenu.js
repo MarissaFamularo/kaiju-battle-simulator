@@ -32,6 +32,8 @@ const CHOICES = [
   { id: 'shadow', label: 'Shadow Pod' },
   { id: 'colossus', label: 'Colossus Pod' },
   { id: 'ultra', label: 'ULTRA POD (5 mechs tall!)' },
+  { id: 'ultraPrime', label: 'ULTRA POD PRIME' },
+  { id: 'glitch', label: 'Glitch Pod' },
   { id: 'sprinterBoss', label: 'Boss Pod: Boss Sprinter' },
   { id: 'shieldBoss', label: 'Boss Pod: Boss Shield' },
   { id: 'mortarBoss', label: 'Boss Pod: Boss Mortar' },

@@ -230,6 +230,21 @@ Built the same day. **Claude's calls:**
 - Missions 31 to 33: The Ultra Pod, The Pylons (the only mission you can lose on a timer: about 5 minutes),
   Stop the New Dimension. It ends with one Ultra Pod escaping through the Gate. The war is not over.
 
+## Parts 8 and 9: The Colliding Realities, and Part 10: The End of the War
+
+Patrick, 2026-11-27, in his words: "Part 8, the colliding realities. The rift is not stable. More are here. And
+part 9 and part 8 are in the same part. New campaign: the end of the war. The mega mech vs ultra pods. Mega mech
+is as tall as an ultra pod."
+
+Built the same day. **Claude's calls:**
+- **Parts 8 and 9 are one block** of missions (34 to 36): three, four, then five unstable rifts that flicker,
+  purple lightning near you, **Glitch Pods** from another reality (colors keep changing, they teleport), kaiju
+  from another reality, two Ultra Pods at once, and three Rift Anchors to destroy.
+- **The Mega Mech** (missions 37 and 38): your own Jaeger at 5 times the size, which is Ultra Pod height. Seven
+  times the armor, five times the damage, faster, and its feet flatten ordinary tripods.
+- **ULTRA POD PRIME**: the final boss, 7500 health.
+- **The last ending**: the corruption fades off the Earth and the card says THE WAR IS OVER.
+
 ## Build order
 
 1. **(Built 2026-11-27.) Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,

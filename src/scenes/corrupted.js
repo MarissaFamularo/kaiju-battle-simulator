@@ -41,7 +41,16 @@ export class CorruptedScene {
     s.add(g);
   }
 
-  start(onDone) {
+  // mode 'return': coming home to a corrupted Earth (start of part 6). mode 'healed': the war is over (end of part 10).
+  start(onDone, mode = 'return') {
+    this.mode = mode;
+    if (!this.card) {
+      this.card = document.createElement('div');
+      this.card.style.cssText = 'position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;pointer-events:none;background:rgba(0,0,0,0);transition:background 2s;font-family:Orbitron,sans-serif;color:#fff';
+      this.card.innerHTML = '<div style="font-weight:900;font-size:min(10vw,96px);letter-spacing:.14em;text-shadow:0 0 30px #38d8ff">THE WAR IS OVER</div><div style="margin-top:20px;font-size:min(3vw,24px);letter-spacing:.3em;color:#9fe8ff">YOU SAVED THE EARTH, PILOT</div><div style="margin-top:5vh;font-size:min(2.4vw,18px);letter-spacing:.3em;color:#ffd23a">THE END</div>';
+      document.body.appendChild(this.card);
+    }
+    this.card.style.display = 'none'; this.card.style.background = 'rgba(0,0,0,0)';
     this.onDone = onDone; this.t = 0; this.beat = ''; this.active = true;
     this.app.nav.clear(); this.app.nav.show(false); this.app.game.hud.show(false); audio.stopLoops();
     $('cine').classList.add('show');
@@ -54,6 +63,7 @@ export class CorruptedScene {
     if (!this.active) return;
     this.active = false;
     $('cine').classList.remove('show'); $('cine-title').style.opacity = 0;
+    if (this.card) this.card.style.display = 'none';
     const done = this.onDone; this.onDone = null;
     if (done) done();
   }
@@ -64,6 +74,21 @@ export class CorruptedScene {
     cam.aspect = window.innerWidth / window.innerHeight; cam.updateProjectionMatrix();
     this.earthMat.uniforms.uTime.value += dt;
     this.earth.rotation.y = this.veins.rotation.y = this.nests.rotation.y = t * 0.04;
+    if (this.mode === 'healed') {
+      // the corruption fades away and the Earth is blue and green again
+      const sickH = 1 - Math.min(1, Math.max(0, (t - 4) / 7));
+      this.veins.material.opacity = sickH * 0.55;
+      this.haze.material.opacity = sickH * 0.14;
+      this.nests.visible = sickH > 0.05; this.nests.scale.setScalar(0.9 + sickH * 0.1);
+      this.star.position.set(-900 + t * 70, 240, 1500); this.star.rotation.y = Math.PI / 2;
+      cam.position.set(-800 + t * 12, 500, 2700 - t * 20); cam.lookAt(0, 0, 0);
+      if (t < 4) { if (this.enter('h1')) { this.say('THE LAST ULTRA POD HAS FALLEN', 'the Mega Mech is still standing'); audio.play('uiBig'); } }
+      else if (t < 11) { if (this.enter('h2')) { this.say('THE RIFTS ARE CLOSED', 'and the Earth is healing'); audio.play('rumble'); } }
+      else if (t < 16) { if (this.enter('h3')) { this.say('HUMANS AND KAIJU, TOGETHER', 'they saved the home they share'); audio.play('uiBig'); } }
+      else if (this.enter('h4')) { this.say('', ''); this.card.style.display = 'flex'; requestAnimationFrame(() => { this.card.style.background = 'rgba(0,0,0,0.55)'; }); audio.play('horn'); audio.play('uiBig'); }
+      if (t >= 25) this.finish();
+      return;
+    }
     // the ship flies in from behind the camera toward the Earth
     this.star.position.set(260, 120, 3200 - t * 95);
     this.star.rotation.y = Math.PI;

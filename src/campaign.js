@@ -633,6 +633,118 @@ export const MISSIONS = [
     goal: (g, s) => (s.gate && s.gate.locked ? `Destroy the 2 pylons protecting the Gate (${Math.min(2, beaten(g, 'pylon'))}/2)` : 'Destroy the Dimension Gate!'),
     done: (g) => beaten(g, 'gate') >= 1,
     failed: () => null,
-    win: 'The Gate is destroyed and the rift is closing! The new dimension is shut. But the scouts saw one Ultra Pod walk through just before it closed...',
+    win: 'The Gate is destroyed and the rift is closing! But the scouts saw one Ultra Pod walk through just before it closed, and the rift did not close all the way...',
+  },
+  // ------------------------------------------------------------------ PARTS 8 AND 9: THE COLLIDING REALITIES
+  // Patrick, 2026-11-27: "Part 8, the colliding realities. The rift is not stable. More are here. And part 9
+  // and part 8 are in the same part." So this block is both parts.
+  {
+    title: 'The Rift Is Not Stable',
+    part: 8, corrupt: true, rift: 3, storm: true, scouts: 3, walkers: 2, allyFrames: ['titan', 'ranger', 'scout'],
+    brief: 'Parts 8 and 9: THE COLLIDING REALITIES. The Ultra Pod that got through broke something. The rift is not stable, and now there are three of them. Other realities are crashing into ours: purple lightning, kaiju from somewhere else, and Glitch Pods whose colors keep changing. Destroy 14 of whatever falls out!',
+    start(g, s) { s.sent = 0; s.wait = 3; },
+    tick(g, s, dt) {
+      s.wait -= dt;
+      if (s.sent >= 14 || s.wait > 0 || living(g).length + g.warnings.length >= (g.lowPower ? 4 : 5)) return;
+      s.wait = 6; s.sent++;
+      const a = Math.random() * 6.28, d = 260 + Math.random() * 260, B = g.city.bound - 200;
+      const x = Math.max(-B, Math.min(B, g.mech.pos.x + Math.cos(a) * d)), z = Math.max(g.city.waterEdge + 150, Math.min(B, g.mech.pos.z + Math.sin(a) * d));
+      if (s.sent % 5 === 0) { g.queueKaiju(4); return; } // a kaiju from another reality: not a friend
+      const type = ['glitch', 'glitch', 'blink', 'shadow', 'gatling', 'boom', 'thunder', 'baby'][Math.floor(Math.random() * 8)];
+      g.fx.flash({ x, y: g.city.groundAt(x, z) + 60, z }, '#c07dff', 9000, 0.4);
+      g.spawnAwake(type, x, z);
+      g.hud.alert('SOMETHING FELL OUT OF THE RIFT', 2.5, true);
+    },
+    goal: (g) => `Destroy what falls out of the rifts (${Math.min(14, g.stats.kills)}/14)`,
+    done: (g, s) => s.sent >= 14 && g.stats.kills >= 14 && noneComing(g),
+    failed: () => null,
+    win: 'That is everything that fell out... for now. The rifts are getting bigger.',
+  },
+  {
+    title: 'More Are Here',
+    part: 8, corrupt: true, rift: 4, storm: true, scouts: 4, walkers: 2, friends: 1, allyFrames: ['titan', 'ranger', 'titan', 'scout'],
+    brief: 'More are here. Two ULTRA PODS just stepped out of two different rifts at the same time, and they brought Glitch Pods with them. Every mech, every walker and every kaiju friend is on the field. Bring them both down!',
+    start(g, s) {
+      const m = g.mech.pos, B = g.city.bound - 300;
+      for (const sgn of [-1, 1]) g.spawnAwake('ultra', Math.max(-B, Math.min(B, m.x + Math.sin(g.mech.yaw + sgn * 0.7) * 620)), Math.max(g.city.waterEdge + 250, Math.min(B, m.z + Math.cos(g.mech.yaw + sgn * 0.7) * 620)));
+      g.spawnAwake('glitch', m.x + 200, m.z + 240); g.spawnAwake('glitch', m.x - 220, m.z + 220);
+      s.sent = true;
+      g.hud.alert('TWO ULTRA PODS!', 5, true);
+    },
+    goal: (g) => `Bring down both Ultra Pods (${Math.min(2, beaten(g, 'ultra'))}/2)`,
+    done: (g, s) => s.sent && beaten(g, 'ultra') >= 2 && noneComing(g),
+    failed: () => null,
+    win: 'Both Ultra Pods are down! But the realities are still crashing together. We have to pin them apart.',
+  },
+  {
+    title: 'Realities Collide',
+    part: 8, corrupt: true, rift: 5, storm: true, scouts: 3, walkers: 2, friends: 1, allyFrames: ['titan', 'ranger', 'scout'],
+    brief: 'Five rifts now, and the planets inside them are drifting into each other. Three Rift Anchors on the ground are holding the realities together. Destroy all 3 so the realities come apart again, while everything from the other side tries to stop you.',
+    start(g, s) {
+      s.anchors = true;
+      const m = g.mech.pos, B = g.city.bound - 250;
+      for (let i = 0; i < 3; i++) {
+        const a = g.mech.yaw + (i - 1) * 1.2, d = 560 + (i % 2) * 200;
+        const x = Math.max(-B, Math.min(B, m.x + Math.sin(a) * d)), z = Math.max(g.city.waterEdge + 200, Math.min(B, m.z + Math.cos(a) * d));
+        g.kaijus.push(new s0.Reactor(g, { x, z, pylon: true }));
+        g.addBeacon(x, z, '#c07dff');
+        g.spawnAwake(['glitch', 'tank', 'shield'][i], x + 80, z + 60);
+      }
+      g.riftK = 1; s.next = 14;
+      g.hud.alert('DESTROY THE 3 RIFT ANCHORS', 5, true);
+    },
+    tick(g, s, dt) {
+      g.riftK = 1 - Math.min(3, beaten(g, 'pylon')) * 0.28;
+      s.next -= dt;
+      if (s.next <= 0 && beaten(g, 'pylon') < 3 && living(g, (k) => !k.isShip).length < 3) { s.next = 14; g.spawnAwake(['glitch', 'blink', 'boom'][Math.floor(Math.random() * 3)], g.mech.pos.x + 240, g.mech.pos.z + 200); }
+    },
+    goal: (g) => (beaten(g, 'pylon') >= 3 ? 'Destroy what is left' : `Destroy the Rift Anchors (${Math.min(3, beaten(g, 'pylon'))}/3)`),
+    done: (g, s) => !!s.anchors && beaten(g, 'pylon') >= 3 && noneComing(g),
+    failed: () => null,
+    win: 'The realities are coming apart again! But three Ultra Pods are still on our side of the rift. Good thing we built something too: THE MEGA MECH.',
+  },
+  // ------------------------------------------------------------------ PART 10: THE END OF THE WAR
+  // Patrick: "The end of the war. The mega mech vs ultra pods. Mega mech is as tall as an ultra pod."
+  {
+    title: 'The Mega Mech',
+    part: 10, corrupt: true, rift: 2, mega: true, scouts: 3, allyFrames: ['titan', 'ranger', 'scout'],
+    brief: 'Part 10: THE END OF THE WAR. Climb into the MEGA MECH. It is as tall as an Ultra Pod, five times the size of your Jaeger, and it hits five times as hard. Ordinary tripods are so small now that you can step on them. Destroy the Ultra Pod and everything around it!',
+    startAt: () => ({ x: -200, z: 1250 }),
+    start(g, s) {
+      const m = g.mech.pos, B = g.city.bound - 300, f = { x: Math.sin(g.mech.yaw), z: Math.cos(g.mech.yaw) };
+      g.spawnAwake('ultra', Math.max(-B, Math.min(B, m.x + f.x * 900)), Math.max(g.city.waterEdge + 250, Math.min(B, m.z + f.z * 900)));
+      for (let i = 0; i < 6; i++) g.spawnAwake(['attacker', 'gatling', 'tank', 'baby', 'flame', 'attacker'][i], m.x + f.x * 420 + (i - 2.5) * 110, m.z + f.z * 420 + (i % 2) * 90);
+      s.sent = true;
+      g.nav.say('mega', 'You are in the MEGA MECH! Look how small everything is. You can step right on the little tripods. The Ultra Pod is the same size as you now. Go get it!', 3, 0);
+    },
+    goal: (g) => (beaten(g, 'ultra') ? 'Stomp the rest!' : 'MEGA MECH vs ULTRA POD'),
+    done: (g, s) => s.sent && beaten(g, 'ultra') >= 1 && noneComing(g),
+    failed: () => null,
+    win: 'The Mega Mech works! One Ultra Pod down. Two more, and their leader, are all that is left.',
+  },
+  {
+    title: 'The End of the War',
+    part: 10, corrupt: true, rift: 1, mega: true, scouts: 3, friends: 1, allyFrames: ['titan', 'ranger', 'scout'], ending: 'peace',
+    brief: 'This is the last battle of the whole war. Two Ultra Pods, and then ULTRA POD PRIME, the strongest machine the tripods ever built. You are in the Mega Mech. Everyone on Earth is watching. Finish it, pilot!',
+    startAt: () => ({ x: -200, z: 1250 }),
+    start(g, s) {
+      const m = g.mech.pos, B = g.city.bound - 300;
+      for (const sgn of [-1, 1]) g.spawnAwake('ultra', Math.max(-B, Math.min(B, m.x + Math.sin(g.mech.yaw + sgn * 0.6) * 950)), Math.max(g.city.waterEdge + 250, Math.min(B, m.z + Math.cos(g.mech.yaw + sgn * 0.6) * 950)));
+      s.prime = false;
+      g.hud.alert('THE LAST BATTLE', 5, true);
+    },
+    tick(g, s) {
+      if (!s.prime && beaten(g, 'ultra') >= 2) {
+        s.prime = true;
+        const m = g.mech.pos, B = g.city.bound - 300;
+        g.spawnAwake('ultraPrime', Math.max(-B, Math.min(B, m.x + Math.sin(g.mech.yaw) * 800)), Math.max(g.city.waterEdge + 250, Math.min(B, m.z + Math.cos(g.mech.yaw) * 800)));
+        g.hud.alert('ULTRA POD PRIME!', 6, true);
+        g.nav.say('rise_ultraPrime', 'ULTRA POD PRIME! The last and strongest one. This is the final battle of the whole war. You can do it, pilot!', 3, 0);
+      }
+    },
+    goal: (g, s) => (s.prime ? 'Destroy ULTRA POD PRIME and end the war!' : `Destroy the Ultra Pods (${Math.min(2, beaten(g, 'ultra'))}/2)`),
+    done: (g, s) => s.prime && beaten(g, 'ultraPrime') >= 1,
+    failed: () => null,
+    win: 'ULTRA POD PRIME HAS FALLEN! It is over. The war is over!',
   },
 ];

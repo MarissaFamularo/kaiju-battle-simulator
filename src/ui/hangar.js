@@ -217,6 +217,7 @@ export class Hangar {
       { id: 'music', label: st.music ? 'MUSIC ON' : 'MUSIC OFF' },
       { id: 'quality', label: st.quality === 'high' ? 'GRAPHICS HIGH' : 'GRAPHICS FAST' },
       { id: 'bright', label: 'BRIGHTNESS ' + (BRIGHT_LABEL[st.bright] || 'MEDIUM') },
+      { id: 'mega', label: st.mega ? 'MEGA MECH ON' : 'MEGA MECH OFF', title: 'Pilot the Mega Mech (5 times bigger) in Free Play, Free Smash and the other non-story modes.' },
     ], null, (v) => {
       if (v === 'bright') st.bright = { dim: 'medium', medium: 'bright', bright: 'dim' }[st.bright] || 'dim';
       else if (v === 'quality') st.quality = st.quality === 'high' ? 'low' : 'high';

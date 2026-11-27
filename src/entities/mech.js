@@ -32,7 +32,10 @@ export class Mech {
   constructor(game, cfg) {
     this.game = game;
     this.cfg = cfg;
-    this.frame = FRAMES[cfg.frame];
+    this.frame = { ...FRAMES[cfg.frame] };
+    // Part 10: the Mega Mech. As tall as an Ultra Pod, and everything about it is bigger.
+    this.mega = cfg.mega || 1;
+    if (this.mega > 1) { this.frame.scale *= this.mega; this.frame.speed *= 2.3; this.frame.power *= 5; this.frame.armor *= 7; }
     this.model = buildMech(cfg);
     this.root = this.model.root;
     this.scale = this.frame.scale;
@@ -291,7 +294,7 @@ export class Mech {
       if (n > 1) d.applyAxisAngle(_up, (i - (n - 1) / 2) * w.spread).normalize(); // a flat fan
       g.projectiles.fire({
         pos: from, dir: d, speed: w.speed, damage: w.damage * this.frame.power, owner: 'player', weapon: w.id,
-        color, size: w.size || (laser ? 8 : 12), smash: w.smash, radius: w.radius || (laser ? 4.5 : 6), boom: w.boom || 0,
+        color, size: (w.size || (laser ? 8 : 12)) * (this.mega > 1 ? 3 : 1), smash: w.smash, radius: (w.radius || (laser ? 4.5 : 6)) * (this.mega > 1 ? 2.5 : 1), boom: w.boom || 0,
       });
     }
     g.fx.glow(from, color, laser ? 34 : 60, 0.12);
@@ -347,7 +350,7 @@ export class Mech {
     const w = a.w;
     const s = this.scale;
     const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
-    const h = THREE.MathUtils.clamp(40 * s + view.pitch * 55, 6, 80);
+    const h = THREE.MathUtils.clamp(40 * s + view.pitch * 55 * Math.max(1, s * 0.6), 6, 80 * Math.max(1, s * 0.8));
     const point = this.pos.clone().addScaledVector(fwd, w.reach * s).setY(this.pos.y + h);
     const dmg = w.damage * this.frame.power;
     const res = g.hitKaiju(point, w.radius * s, dmg, fwd, { knockback: w.knockback || 8, source: 'mech', weapon: w.id, stagger: w.id === 'fist' ? 0.8 : 0.25 });
@@ -409,6 +412,13 @@ export class Mech {
 
   footstep(side) {
     const g = this.game;
+    if (this.mega > 1) {
+      // a Mega Mech foot flattens ordinary tripods
+      const fp = new THREE.Vector3(Math.cos(this.yaw) * side * 6.5 * this.scale, 0, -Math.sin(this.yaw) * side * 6.5 * this.scale).add(this.pos).setY(this.pos.y + 30);
+      g.hitKaiju(fp, 55, 260, new THREE.Vector3(0, -1, 0), { source: 'mech', weapon: 'stomp', knockback: 10 });
+      g.city.damageArea(fp, 50, 900, { source: 'mech', force: 1.6 });
+      g.shake(0.6);
+    }
     const f = new THREE.Vector3(Math.cos(this.yaw) * side * 6.5 * this.scale, 0, -Math.sin(this.yaw) * side * 6.5 * this.scale).add(this.pos);
     audio.play('stomp', f, 0.55);
     g.fx.dust(f.setY(this.pos.y + 2), 0.5, 5);
