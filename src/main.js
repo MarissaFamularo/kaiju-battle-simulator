@@ -158,13 +158,17 @@ class App {
     this.state = 'drop';
     this.nav.clear();
     this.input.enabled = true;
-    this.drop.start(this.hangar.cfg, () => this.startGame());
+    // chapter 2 modes open with the invasion story the first time, then a short drop
+    const ch2 = ['campaign', 'freeplay', 'invasion'].includes(this.hangar.settings.mode);
+    const variant = !ch2 ? 'classic' : this.introSeen ? 'invasionShort' : 'invasion';
+    if (ch2) this.introSeen = true;
+    this.drop.start(this.hangar.cfg, (grounded) => this.startGame(grounded), variant);
   }
 
-  startGame() {
+  startGame(grounded = false) {
     this.state = 'game';
     this.input.endFrame(); // the key that skipped the drop shouldn't also skip the landing
-    this.game.startMission({ ...this.hangar.cfg }, this.hangar.settings.mode, this.hangar.settings.mission); // the hangar holds the mode you just picked
+    this.game.startMission({ ...this.hangar.cfg }, this.hangar.settings.mode, this.hangar.settings.mission, grounded); // the hangar holds the mode you just picked
     this.nav.show(true);
   }
 

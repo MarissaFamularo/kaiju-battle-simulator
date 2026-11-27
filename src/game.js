@@ -81,7 +81,7 @@ export class Game {
   }
 
   // ---------------------------------------------------------------- mission flow
-  startMission(cfg, mode, missionIdx = 0) {
+  startMission(cfg, mode, missionIdx = 0, grounded = false) {
     const kind = mode === 'freeplay' || mode === 'campaign' ? 'wasteland' : 'city';
     // campaign: which mission, and its scratch state
     this.missionIdx = Math.max(0, Math.min(MISSIONS.length - 1, missionIdx || 0));
@@ -121,6 +121,17 @@ export class Game {
     this.attacked = false;
     audio.intensity = 0.2;
     this.clouds();
+    if (grounded) this.startGrounded();
+  }
+
+  // The chapter 2 opening already showed the Jaeger landing, so skip the drop and start on the ground.
+  startGrounded() {
+    const m = this.mech;
+    m.setPosition(LAND.x, 0, LAND.z);
+    this.city.damageArea(new THREE.Vector3(LAND.x, 5, LAND.z), 75, 1400, { source: 'landing', noFx: true });
+    this.carrier.g.visible = false;
+    this.camPivot.copy(m.pos).add(new THREE.Vector3(0, CAM.height * m.scale, 0));
+    this.beginPlay();
   }
 
   clouds() {

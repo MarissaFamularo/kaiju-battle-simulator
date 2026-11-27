@@ -3,6 +3,7 @@ import { buildMech } from '../entities/mechModel.js';
 import { buildCarrier } from '../entities/drones.js';
 import { Particles } from '../fx/particles.js';
 import { audio } from '../audio.js';
+import { buildInvasionProps, resetInvasion, cleanupInvasion, updateInvasion } from './invasionIntro.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -114,6 +115,7 @@ export class DropScene {
     this.plasma.scale.set(48, 80, 48);
     this.plasma.visible = false;
     s.add(this.plasma);
+    buildInvasionProps(this); // chapter 2's opening uses the same space set
   }
 
   buildStation() {
@@ -177,8 +179,12 @@ export class DropScene {
     this.station = st;
   }
 
-  start(cfg, onDone) {
+  // variant: 'classic' (the original drop), 'invasion' (chapter 2's full opening) or 'invasionShort'
+  start(cfg, onDone, variant = 'classic') {
     this.onDone = onDone;
+    this.variant = variant;
+    cleanupInvasion(this);
+    this.entrySky.visible = false; this.plasma.visible = false;
     this.t = 0;
     this.done = false;
     if (this.carrier) this.scene.remove(this.carrier.g);
@@ -196,6 +202,7 @@ export class DropScene {
     $('cine').classList.add('show');
     this.app.nav.show(true);
     audio.setLoop('wind', 0);
+    if (variant !== 'classic') resetInvasion(this, variant === 'invasion');
   }
 
   title(text, sub) {
@@ -211,7 +218,9 @@ export class DropScene {
     audio.setLoop('wind', 0);
     audio.setLoop('fire', 0);
     this.scene.remove(this.carrier.g);
-    if (this.onDone) this.onDone();
+    cleanupInvasion(this);
+    // after the full chapter 2 opening the Jaeger is already on the ground
+    if (this.onDone) this.onDone(this.variant === 'invasion');
   }
 
   skip() { this.finish(); }
@@ -228,6 +237,7 @@ export class DropScene {
     for (const b of this.blinkers) b.visible = Math.sin(time * 4) > 0;
     const c = this.carrier;
     for (const f of c.fans) f.rotation.y += dt * 30;
+    if (this.variant !== 'classic') { updateInvasion(this, dt, time); this.fx.update(dt); return; }
     const nav = this.app.nav;
     const name = this.cfg.name;
 

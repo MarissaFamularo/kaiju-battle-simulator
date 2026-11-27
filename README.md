@@ -74,7 +74,9 @@ Patrick's full design is in `docs/chapter-2-design.md`. Built so far:
 - **Uber Pod.** Taller, with longer legs and weapons stacked on its head: laser mini guns and a big laser. Its scanner sees farther and wider and it comes straight for you. Ordinary weapons only leave a red hot mark that cools down. Only the **Energy Sword** and **Laser Blaster** hurt it. It arrives with about 20 lightning strikes.
 - **CAMPAIGN:** seven missions on the huge map, unlocked one at a time and saved in the browser: First Contact, Supply Run, Rescue, The Harvester, Hold the Bunker, Monsters of the Crater, The Uber Pod. The mission list is in `src/campaign.js`.
 
-Still to come: the new space intro.
+- **The opening story.** The first time you launch a chapter 2 mode (Campaign, Free Play or Invasion) you see: the Earth; an unknown ship hitting Station Aegis; the Jaeger ejecting just before the hit and falling to the planet; a fight with a kaiju in the ruined city; twenty lightning strikes on one spot; and a tripod rising. Then the game starts with your Jaeger already on the ground. Space or a tap skips it. Later launches show a short drop instead. Code: `src/scenes/invasionIntro.js`.
+
+**Play it:** https://marissafamularo.github.io/kaiju-battle-simulator/ (updates whenever `main` is pushed).
 
 ### Modes
 
