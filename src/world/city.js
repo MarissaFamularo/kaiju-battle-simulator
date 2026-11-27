@@ -101,7 +101,7 @@ export class City {
     this.wallMats = styles.map((s, i) => {
       const { map, emissive } = makeFacade({ ...s, seed: 100 + i * 17, litChance: 0.3 + (i % 3) * 0.08 });
       return new THREE.MeshStandardMaterial({
-        map, emissiveMap: emissive, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 1.6,
+        map, emissiveMap: emissive, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 0.95,
         metalness: s.metal, roughness: s.rough,
       });
     });

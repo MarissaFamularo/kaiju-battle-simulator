@@ -25,7 +25,7 @@ export class Projectiles {
       pos: o.pos.clone(), vel: o.dir.clone().multiplyScalar(o.speed), damage: o.damage, owner: o.owner,
       color: new THREE.Color(o.color || '#ffffff'), size: o.size || 8, radius: o.radius || 3, gravity: o.gravity || 0,
       life: o.life || 4, acid: !!o.acid, smash: o.smash ?? 1, kind: o.kind || 'plasma', boom: o.boom || 0,
-      trail: o.trail || null,
+      trail: o.trail || null, target: o.target || null, aimIdx: o.aimIdx || 0, age: 0,
     });
   }
 
@@ -34,6 +34,7 @@ export class Projectiles {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const p = this.list[i];
       p.life -= dt;
+      if (p.target) this.home(p, dt);
       _a.copy(p.pos);
       p.vel.y += p.gravity * dt;
       p.pos.addScaledVector(p.vel, dt);
@@ -132,6 +133,18 @@ export class Projectiles {
     g.fx.glow(hit.point, p.color, 70, 0.2);
     g.fx.flash(hit.point, '#' + p.color.getHexString(), 2500, 0.2);
     audio.play(hit.weak ? 'weak' : 'smallBoom', hit.point, 0.7);
+  }
+
+  // Homing missiles: after a short launch arc, steer toward one of the target's hit spots.
+  home(p, dt) {
+    p.age += dt;
+    const k = p.target;
+    if (k.dead) { p.target = null; return; }
+    if (p.age <= 0.3) return;
+    const hc = k.hitCache && k.hitCache.length ? k.hitCache[p.aimIdx % k.hitCache.length] : null;
+    const aim = hc ? hc.p : k.pos.clone().setY(k.height * 0.5 || 40);
+    const sp = Math.min(420, p.vel.length() + dt * 260);
+    p.vel.lerp(aim.clone().sub(p.pos).normalize().multiplyScalar(sp), Math.min(1, dt * 5));
   }
 
   clear() { this.list.length = 0; }

@@ -43,7 +43,7 @@ class App {
     this.composer = new EffectComposer(renderer);
     this.renderPass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
     this.composer.addPass(this.renderPass);
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2), 0.55, 0.45, 0.92);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2), 0.32, 0.4, 0.95);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
 
@@ -100,6 +100,7 @@ class App {
 
   applySettings(s) {
     this.settings = s;
+    this.renderer.toneMappingExposure = { dim: 0.55, medium: 0.72, bright: 1 }[s.bright] || 0.72;
     this.nav.setVoice(s.voice);
     audio.musicOn = s.music;
     if (!s.music) audio.stopMusic();

@@ -78,7 +78,7 @@ export class Game {
     this.mode = mode;
     this.time = 0;
     this.stats = { kills: 0, weakHits: 0, damage: 0, start: 0, bonks: 0 };
-    this.cooldowns = { drones: 0, apache: 12, gunship: 25, jets: 35 };
+    this.cooldowns = { drones: 0, apache: 12, gunship: 25, jets: 35, missiles: 0 };
     this.waveIdx = -1;
     this.waveState = 'pre';
     this.waveTimer = 14;
@@ -264,6 +264,10 @@ export class Game {
       this.military.callJets();
       this.cooldowns.jets = BACKUP.jets.cooldown;
       this.nav.say('jets', 'Airstrike incoming! Stay clear of the bombs!', 2, 0);
+    }
+    if (input.pressed('KeyE') && this.cooldowns.missiles <= 0 && this.mech && this.mech.model.bay && this.mech.launchMissiles()) {
+      this.cooldowns.missiles = BACKUP.missiles.cooldown;
+      this.nav.say('missiles', 'Missile bay open! Fox two!', 1, 20);
     }
     if (input.pressed('KeyF')) this.toggleEject();
     if (input.pressed('KeyV')) {

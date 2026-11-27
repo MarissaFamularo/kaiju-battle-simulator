@@ -1,22 +1,28 @@
 import * as THREE from 'three';
-import { FRAMES, WEAPONS, HEADS, PALETTE, GLOWS, DEFAULT_JAEGER, rateBuild } from '../config.js';
-import { buildMech } from '../entities/mechModel.js';
+import { FRAMES, WEAPONS, HEADS, CHESTS, PALETTE, GLOWS, DEFAULT_JAEGER, rateBuild } from '../config.js';
+import { buildMech, poseBay } from '../entities/mechModel.js';
 import { audio } from '../audio.js';
 
 const $ = (id) => document.getElementById(id);
 const STORE = 'kbs.jaeger.v1';
 const SETTINGS = 'kbs.settings.v1';
+const BRIGHT_LABEL = { dim: 'LOW', medium: 'MEDIUM', bright: 'HIGH' };
 
 export function loadConfig() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE) || 'null');
-    if (s && FRAMES[s.frame] && WEAPONS[s.left] && WEAPONS[s.right]) return { ...DEFAULT_JAEGER, ...s };
+    if (s && FRAMES[s.frame] && WEAPONS[s.left] && WEAPONS[s.right]) {
+      const c = { ...DEFAULT_JAEGER, ...s };
+      if (!HEADS[c.head]) c.head = 'visor';
+      if (!CHESTS[c.chest]) c.chest = 'standard';
+      return c;
+    }
   } catch (e) { /* storage blocked */ }
   return { ...DEFAULT_JAEGER };
 }
 function saveConfig(c) { try { localStorage.setItem(STORE, JSON.stringify(c)); } catch (e) { /* ignore */ } }
 export function loadSettings() {
-  try { return { voice: true, music: true, quality: 'high', mode: 'mission', ...JSON.parse(localStorage.getItem(SETTINGS) || '{}') }; } catch (e) { return { voice: true, music: true, quality: 'high', mode: 'mission' }; }
+  try { return { voice: true, music: true, quality: 'high', mode: 'mission', bright: 'medium', ...JSON.parse(localStorage.getItem(SETTINGS) || '{}') }; } catch (e) { return { voice: true, music: true, quality: 'high', mode: 'mission', bright: 'medium' }; }
 }
 function saveSettings(s) { try { localStorage.setItem(SETTINGS, JSON.stringify(s)); } catch (e) { /* ignore */ } }
 
@@ -39,7 +45,7 @@ export class Hangar {
   buildScene() {
     const s = this.scene;
     s.add(new THREE.HemisphereLight('#6a8cff', '#201a18', 0.6));
-    const key = new THREE.SpotLight('#ffffff', 9000, 700, 0.45, 0.6, 1.6);
+    const key = new THREE.SpotLight('#ffffff', 6500, 700, 0.45, 0.6, 1.6);
     key.position.set(60, 180, 90);
     key.target.position.set(0, 30, 0);
     key.castShadow = true;
@@ -163,7 +169,8 @@ export class Hangar {
     const wl = Object.values(WEAPONS).map((w) => ({ id: w.id, label: w.name, title: w.desc }));
     this.opt('hg-left-w', wl, cfg.left, set('left'));
     this.opt('hg-right-w', wl, cfg.right, set('right'));
-    this.opt('hg-head', Object.values(HEADS).map((h) => ({ id: h.id, label: h.name })), cfg.head, set('head'));
+    this.opt('hg-head', Object.values(HEADS).map((h) => ({ id: h.id, label: h.name, title: h.desc || '' })), cfg.head, set('head'));
+    this.opt('hg-chest', Object.values(CHESTS).map((c) => ({ id: c.id, label: c.name, title: c.desc })), cfg.chest, set('chest'));
     this.swatches('hg-primary', PALETTE, cfg.primary, set('primary'));
     this.swatches('hg-accent', PALETTE, cfg.accent, set('accent'));
     this.swatches('hg-glow', GLOWS, cfg.glow, set('glow'));
@@ -172,7 +179,7 @@ export class Hangar {
     const L = WEAPONS[cfg.left], R = WEAPONS[cfg.right];
     const dps = (w) => (w.damage / w.cooldown);
     const stats = [
-      ['ARMOR', f.armor / 2000],
+      ['ARMOR', f.armor * (CHESTS[cfg.chest]?.armor || 1) / 2400],
       ['SPEED', f.speed / 34],
       ['POWER', ((dps(L) + dps(R)) * f.power) / 230],
       ['RANGE', ((L.kind === 'ranged') + (R.kind === 'ranged')) / 2 * 0.8 + 0.2],
@@ -195,8 +202,10 @@ export class Hangar {
       { id: 'voice', label: st.voice ? 'VOICE ON' : 'VOICE OFF' },
       { id: 'music', label: st.music ? 'MUSIC ON' : 'MUSIC OFF' },
       { id: 'quality', label: st.quality === 'high' ? 'GRAPHICS HIGH' : 'GRAPHICS FAST' },
+      { id: 'bright', label: 'BRIGHTNESS ' + (BRIGHT_LABEL[st.bright] || 'MEDIUM') },
     ], null, (v) => {
-      if (v === 'quality') st.quality = st.quality === 'high' ? 'low' : 'high';
+      if (v === 'bright') st.bright = { dim: 'medium', medium: 'bright', bright: 'dim' }[st.bright] || 'dim';
+      else if (v === 'quality') st.quality = st.quality === 'high' ? 'low' : 'high';
       else st[v] = !st[v];
       saveSettings(st);
       this.app.applySettings(st);
@@ -219,7 +228,14 @@ export class Hangar {
       nav.say('hg-weapon', `${w.name}: ${w.desc}${extra}`, 1, 0);
     } else if (k === 'primary' || k === 'accent') nav.say('hg-paint', 'Looking sharp, pilot!', 0, 6);
     else if (k === 'glow') nav.say('hg-glow', 'That energy color shows on your blades and plasma shots.', 0, 8);
-    else if (k === 'head') nav.say('hg-head', 'Nice helmet. That is where you sit, pilot!', 0, 8);
+    else if (k === 'head') {
+      const h = HEADS[v];
+      nav.say('hg-head', h.desc ? `${h.name}! ${h.desc} That is where you sit, pilot.` : 'Nice helmet. That is where you sit, pilot!', 0, 0);
+    } else if (k === 'chest') {
+      nav.say('hg-chest', v === 'missiles'
+        ? 'Missile Bay! In battle, press E. The chest doors open and launch homing missiles at the kaiju!'
+        : `${CHESTS[v].name}. ${CHESTS[v].desc}`, 1, 0);
+    }
   }
 
   rebuildMech() {
@@ -267,6 +283,9 @@ export class Hangar {
     j.shoulderR.rotation.x = 0.1 + Math.sin(time * 1.2 + 1) * 0.04;
     j.elbowL.rotation.x = -0.35; j.elbowR.rotation.x = -0.35;
     j.head.rotation.y = Math.sin(time * 0.5) * 0.3;
-    this.mech.mats.glow.emissiveIntensity = 3.5 + Math.sin(time * 3) * 1;
+    this.mech.mats.glow.emissiveIntensity = 2.6 + Math.sin(time * 3) * 0.7;
+    // show off the Missile Bay doors and spin the reactor
+    poseBay(this.mech.bay, dt, Math.sin(time * 0.9) > 0.2 ? 1 : 0);
+    if (j.reactorSpin) j.reactorSpin.rotation.z += dt * 2;
   }
 }

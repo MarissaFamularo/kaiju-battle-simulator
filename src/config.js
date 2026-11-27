@@ -52,6 +52,17 @@ export const HEADS = {
   visor: { id: 'visor', name: 'Visor' },
   dome: { id: 'dome', name: 'Dome' },
   crest: { id: 'crest', name: 'Crest' },
+  bubble: { id: 'bubble', name: 'Bubble Cockpit', desc: 'A glass bubble. You can see the pilot inside!' },
+  hunter: { id: 'hunter', name: 'Hunter Cockpit', desc: 'Sharp V-visor and antennas for tracking kaiju.' },
+  command: { id: 'command', name: 'Command Deck', desc: 'Wide window, sensor pods and a radar dish.' },
+};
+
+// Chest pieces (added 2026-11-01, Patrick's request).
+export const CHESTS = {
+  standard: { id: 'standard', name: 'Core Plate', desc: 'The classic glowing power core.' },
+  reactor: { id: 'reactor', name: 'Reactor Core', desc: 'A giant spinning reactor ring.' },
+  fortress: { id: 'fortress', name: 'Fortress Plate', desc: 'Extra-thick armor. +20% armor!', armor: 1.2 },
+  missiles: { id: 'missiles', name: 'Missile Bay', desc: 'Doors open and fire homing missiles. Press E in battle!' },
 };
 
 export const PALETTE = [
@@ -69,6 +80,7 @@ export const DEFAULT_JAEGER = {
   left: 'sword',
   right: 'cannon',
   head: 'visor',
+  chest: 'standard',
 };
 
 export const KAIJU_CATS = [
@@ -96,6 +108,7 @@ export const BACKUP = {
   apache: { key: '1', name: 'Apaches', cooldown: 40 },
   gunship: { key: '2', name: 'Gunship', cooldown: 55 },
   jets: { key: '3', name: 'Airstrike', cooldown: 70 },
+  missiles: { key: 'E', name: 'Missiles', cooldown: 9 },
 };
 
 export function rateBuild(cfg) {

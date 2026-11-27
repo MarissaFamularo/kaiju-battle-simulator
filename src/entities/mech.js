@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { FRAMES, WEAPONS, WORLD } from '../config.js';
-import { buildMech } from './mechModel.js';
+import { FRAMES, WEAPONS, WORLD, CHESTS } from '../config.js';
+import { buildMech, poseBay } from './mechModel.js';
 import { audio } from '../audio.js';
 
 const POSES = {
@@ -42,7 +42,9 @@ export class Mech {
     this.yaw = 0;
     this.onGround = true;
     this.airTime = 0;
-    this.maxHp = this.hp = this.frame.armor;
+    this.maxHp = this.hp = Math.round(this.frame.armor * (CHESTS[cfg.chest]?.armor || 1));
+    this.bayT = -1;      // Missile Bay volley timer (-1 = closed)
+    this.bayShots = 0;
     this.energy = 100;
     this.radius = 9 * this.scale;
     this.height = 56 * this.scale;
@@ -182,7 +184,55 @@ export class Mech {
     }
     this.body.setNextKinematicTranslation({ x: this.pos.x, y: this.pos.y + 11 * this.scale, z: this.pos.z });
     this.hurtFlash = Math.max(0, this.hurtFlash - dt * 3);
-    this.model.mats.glow.emissiveIntensity = 3.5 + Math.sin(time * 4) * 0.8 + this.hurtFlash * 6;
+    this.model.mats.glow.emissiveIntensity = 2.6 + Math.sin(time * 4) * 0.6 + this.hurtFlash * 6;
+    this.updateBay(dt);
+  }
+
+  // ---- Missile Bay (E key) ----
+  launchMissiles() {
+    if (!this.model.bay || this.dead || !this.piloted) return false;
+    this.bayT = 0;
+    this.bayShots = 8;
+    audio.play('blade', this.pos, 0.8); // doors opening
+    return true;
+  }
+
+  updateBay(dt) {
+    const j = this.model.j;
+    if (j.reactorSpin) j.reactorSpin.rotation.z += dt * 3;
+    const bay = this.model.bay;
+    if (!bay) return;
+    if (this.bayT >= 0) {
+      this.bayT += dt;
+      let n = 8 - this.bayShots;
+      while (this.bayShots > 0 && this.bayT >= 0.45 + n * 0.11) { this.fireMissile(n); this.bayShots--; n++; }
+      if (this.bayT > 2.4) this.bayT = -1;
+    }
+    poseBay(bay, dt, this.bayT >= 0 ? 1 : 0);
+  }
+
+  fireMissile(k) {
+    const g = this.game;
+    const bay = this.model.bay;
+    this.root.updateMatrixWorld(true);
+    const from = bay.muzzles[k % bay.muzzles.length].getWorldPosition(new THREE.Vector3());
+    let target = g.aimInfo && g.aimInfo.kaiju && !g.aimInfo.kaiju.dead ? g.aimInfo.kaiju : null;
+    if (!target) {
+      let best = Infinity;
+      for (const q of g.kaijus) {
+        if (q.dead || q.emerging) continue;
+        const d = q.pos.distanceTo(this.pos);
+        if (d < best && d < 1400) { best = d; target = q; }
+      }
+    }
+    const dir = this.forward.clone().multiplyScalar(0.75)
+      .add(new THREE.Vector3((Math.random() - 0.5) * 0.5, 0.55 + Math.random() * 0.3, (Math.random() - 0.5) * 0.5)).normalize();
+    g.projectiles.fire({
+      pos: from, dir, speed: 150, damage: 34 * this.frame.power, owner: 'player', kind: 'missile',
+      boom: 0.75, radius: 6, smash: 1.3, life: 6, target, aimIdx: k,
+    });
+    g.fx.glow(from, '#ffb060', 40, 0.15);
+    audio.play('missile', this.pos, 0.9);
   }
 
   land() {

@@ -33,6 +33,7 @@ export class HUD {
       { id: 'apache', k: '1', n: 'Apaches' },
       { id: 'gunship', k: '2', n: 'Gunship' },
       { id: 'jets', k: '3', n: 'Airstrike' },
+      ...(cfg.chest === 'missiles' ? [{ id: 'missiles', k: 'E', n: 'Missiles' }] : []),
       { id: 'eject', k: 'F', n: 'Eject' },
     ];
     for (const a of list) {
@@ -95,8 +96,8 @@ export class HUD {
         setAb(k, arm.cd / arm.w.cooldown, arm.cd <= 0 && m.piloted);
       }
     }
-    for (const id of ['drones', 'apache', 'gunship', 'jets']) {
-      const cd = g.cooldowns[id];
+    for (const id of ['drones', 'apache', 'gunship', 'jets', 'missiles']) {
+      const cd = g.cooldowns[id] || 0;
       setAb(id, cd / BACKUP[id].cooldown, cd <= 0);
     }
     setAb('eject', 0, true, pilotOut ? 'Board' : 'Eject');

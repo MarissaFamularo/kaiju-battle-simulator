@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./src/style.css" />
+  <!-- iPad / touch controls (2026-11-08). Only turns on for touch screens. -->
+  <script defer src="./touch-controls.js"></script>
 </head>
 <body>
   <div id="app"></div>
@@ -47,8 +49,10 @@
       <div id="hg-left-w" class="opts"></div>
       <label class="lbl">RIGHT ARM <span class="key">RIGHT CLICK</span></label>
       <div id="hg-right-w" class="opts"></div>
-      <label class="lbl">HEAD</label>
+      <label class="lbl">HEAD / COCKPIT</label>
       <div id="hg-head" class="opts"></div>
+      <label class="lbl">CHEST <span class="key">MISSILE BAY = E</span></label>
+      <div id="hg-chest" class="opts"></div>
     </div>
     <div id="hg-right" class="panel">
       <label class="lbl">PAINT</label>
@@ -136,6 +140,7 @@
         <div><b>1</b> Apache helicopters</div>
         <div><b>2</b> Gunship</div>
         <div><b>3</b> Jet airstrike</div>
+        <div><b>E</b> Chest missiles (Missile Bay)</div>
         <div><b>F</b> Get out / back in</div>
         <div><b>V</b> Navigator voice on/off</div>
         <div><b>ESC</b> Pause</div>

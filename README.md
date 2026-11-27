@@ -4,7 +4,7 @@ A game by Patrick. Build your own Jaeger, drop from a space station into a big 3
 
 ## How to play
 
-1. **Hangar:** name your Jaeger, pick a frame (Scout, Ranger, Titan), arm weapons, head, and paint colors. Navigator Nova rates your build and gives tips.
+1. **Hangar:** name your Jaeger, pick a frame (Scout, Ranger, Titan), arm weapons, head/cockpit, chest piece, and paint colors. Navigator Nova rates your build and gives tips.
 2. **Drop:** a carrier drone flies your Jaeger out of Orbital Station Aegis, through the atmosphere, and drops it on the city.
 3. **Fight:** kaiju burst out of the ground or the bay somewhere random. Radar only shows a fuzzy zone until they appear. Get close so Nova can scan their glowing **weak spots** (triple damage).
 
@@ -22,6 +22,7 @@ A game by Patrick. Build your own Jaeger, drop from a space station into a big 3
 | 1 | Apache helicopters |
 | 2 | Gunship |
 | 3 | Jet airstrike |
+| E | Fire chest missiles (Missile Bay chest only) |
 | F | Eject from the Jaeger / climb back in |
 | V | Navigator voice on/off |
 | K | Summon a kaiju (Free Smash mode) |
@@ -33,6 +34,18 @@ A game by Patrick. Build your own Jaeger, drop from a space station into a big 3
 - **Wrist Blades:** twin knives, very fast.
 - **Plasma Cannon:** hand folds into a cannon, hits weak spots from far away.
 - **Power Fist:** rocket punch, knocks kaiju back and flattens buildings.
+
+### Cockpits and chest pieces
+
+- **Cockpits:** Visor, Dome, Crest, Bubble Cockpit (glass bubble with the pilot inside), Hunter Cockpit (V-visor and antennas), Command Deck (wide window and radar dish).
+- **Core Plate:** the classic glowing power core.
+- **Reactor Core:** a giant spinning reactor ring.
+- **Fortress Plate:** extra-thick armor, +20% armor.
+- **Missile Bay:** press E and the chest doors open and fire 8 homing missiles (9 second cooldown).
+
+### iPad / touch screens
+
+Touch controls turn on by themselves on touch screens (`public/touch-controls.js`). Left thumb is a joystick (push to the edge to sprint), right thumb drags to aim, and there are LEFT ARM, RIGHT ARM and JUMP buttons. The ability tiles at the bottom can be tapped. Force touch mode on or off with `?touch=1` or `?touch=0` in the URL. Hold the iPad sideways.
 
 ### Modes
 
@@ -51,7 +64,7 @@ npm run build    # production build in dist/
 npm run preview  # serve the production build
 ```
 
-Graphics can be switched to **FAST** in the hangar for slower laptops. The game also lowers its resolution automatically if the frame rate drops.
+Graphics can be switched to **FAST** in the hangar for slower laptops, and **BRIGHTNESS** (Low / Medium / High) changes how bright the city looks. The game also lowers its resolution automatically if the frame rate drops.
 
 ## Tech
 

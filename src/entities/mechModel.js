@@ -20,7 +20,7 @@ export function buildMech(cfg) {
     accent: new THREE.MeshStandardMaterial({ color: cfg.accent, metalness: 0.6, roughness: 0.38 }),
     dark: new THREE.MeshStandardMaterial({ color: '#2a2d33', metalness: 0.75, roughness: 0.45 }),
     glow: new THREE.MeshStandardMaterial({ color: '#000000', emissive: cfg.glow, emissiveIntensity: 4 }),
-    blade: new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: cfg.glow, emissiveIntensity: 5, transparent: true, opacity: 0.95 }),
+    blade: new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: cfg.glow, emissiveIntensity: 3, transparent: true, opacity: 0.95 }),
   };
   // world-scale panel UVs look better on big parts
   const M = (geo, mat, x = 0, y = 0, z = 0) => {
@@ -67,14 +67,7 @@ export function buildMech(cfg) {
   j.torso.add(M(rbox(10, 6, 8, 1.5), mats.dark, 0, 3, 0)); // waist
   j.chest = new THREE.Group(); j.chest.position.y = 6; j.torso.add(j.chest);
   j.chest.add(M(rbox(22, 14, 13, 2.5), mats.primary, 0, 7, 0));
-  j.chest.add(M(rbox(16, 6, 3, 1.5), mats.accent, 0, 11, 6.2));
-  j.chest.add(M(rbox(9, 5, 2, 1), mats.dark, -6, 3, 6.5));
-  j.chest.add(M(rbox(9, 5, 2, 1), mats.dark, 6, 3, 6.5));
-  // chest reactor core
-  const coreRing = M(new THREE.TorusGeometry(3.2, 0.7, 10, 28), mats.dark, 0, 6, 6.8);
-  const core = M(new THREE.CircleGeometry(3, 28), mats.glow, 0, 6, 6.9);
-  j.chest.add(coreRing, core);
-  j.core = core;
+  const bay = buildChest(cfg.chest || 'standard', j, mats, M);
   // back vents / thrusters
   for (const s of [-1, 1]) {
     j.chest.add(M(rbox(5, 10, 4, 1), mats.dark, s * 5, 8, -7.5));
@@ -103,6 +96,42 @@ export function buildMech(cfg) {
       fin.rotation.z = s * 0.4;
       j.head.add(fin);
     }
+  } else if (cfg.head === 'bubble') {
+    const collar = M(new THREE.TorusGeometry(4.9, 0.9, 10, 28), mats.accent, 0, 1.6, 0);
+    collar.rotation.x = Math.PI / 2;
+    j.head.add(collar);
+    j.head.add(M(new THREE.CylinderGeometry(4.6, 5, 2, 20), mats.dark, 0, 0.8, 0));
+    j.head.add(M(rbox(2.6, 3, 2.4, 0.6), mats.dark, 0, 2.8, -0.8)); // pilot seat
+    j.head.add(M(new THREE.SphereGeometry(1.3, 14, 10), mats.accent, 0, 4.6, 0.2)); // pilot helmet
+    j.head.add(M(rbox(1.8, 0.5, 0.4, 0.15), mats.glow, 0, 4.7, 1.4)); // pilot visor
+    const glass = new THREE.Mesh(
+      new THREE.SphereGeometry(5, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.55),
+      new THREE.MeshStandardMaterial({ color: '#9fdcff', metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.32, depthWrite: false }));
+    glass.position.set(0, 1.8, 0);
+    j.head.add(glass);
+  } else if (cfg.head === 'hunter') {
+    j.head.add(M(rbox(7.4, 5, 8.4, 1.4), mats.primary, 0, 4, -0.4));
+    for (const s of [-1, 1]) {
+      const v = M(rbox(3.6, 1.1, 0.8, 0.3), mats.glow, s * 1.7, 4.4, 3.8);
+      v.rotation.z = s * -0.38;
+      j.head.add(v);
+      const ant = M(new THREE.CylinderGeometry(0.25, 0.4, 8, 6), mats.accent, s * 3, 9, -2.5);
+      ant.rotation.set(-0.5, 0, s * -0.25);
+      j.head.add(ant);
+      j.head.add(M(new THREE.SphereGeometry(0.6, 8, 6), mats.glow, s * 3.9, 12.4, -4.4));
+    }
+    j.head.add(M(rbox(1.2, 3, 8, 0.4), mats.accent, 0, 7.2, -0.6));
+  } else if (cfg.head === 'command') {
+    j.head.add(M(rbox(11.5, 5.6, 8, 1.6), mats.primary, 0, 4.2, 0));
+    j.head.add(M(rbox(10, 1.8, 0.8, 0.3), mats.glow, 0, 4.8, 4));
+    for (const s of [-1, 1]) {
+      j.head.add(M(new THREE.SphereGeometry(1.8, 12, 10), mats.accent, s * 6.6, 4.2, 0));
+      j.head.add(M(new THREE.CircleGeometry(0.8, 12), mats.glow, s * 6.6, 4.2, 1.8));
+    }
+    j.head.add(M(new THREE.CylinderGeometry(0.4, 0.4, 3, 6), mats.dark, 0, 8, -1.5));
+    const dish = M(new THREE.CylinderGeometry(2.6, 0.6, 0.8, 16), mats.accent, 0, 9.8, -1.5);
+    dish.rotation.x = -0.6;
+    j.head.add(dish);
   } else {
     j.head.add(M(rbox(8, 5.5, 7, 1.8), mats.primary, 0, 4.2, 0));
     j.head.add(M(rbox(7, 1.6, 1.2, 0.5), mats.glow, 0, 4.6, 3.5));
@@ -190,5 +219,90 @@ export function buildMech(cfg) {
   // Cockpit glow light for nice rim
   mergeStatic(root);
   root.traverse((o) => { if (o.isMesh) o.userData.mech = true; });
-  return { root, j, mats, blades, muzzle, weapons };
+  return { root, j, mats, blades, muzzle, weapons, bay };
+}
+
+// Front-of-chest parts. Returns the Missile Bay rig (doors, rack, muzzles) or null.
+function buildChest(kind, j, mats, M) {
+  const c = j.chest;
+  if (kind === 'reactor') {
+    c.add(M(rbox(16, 4, 3, 1.2), mats.accent, 0, 12.2, 6.2));
+    const ring = M(new THREE.TorusGeometry(5.2, 1.1, 12, 36), mats.accent, 0, 5.5, 6.9);
+    const core = M(new THREE.CircleGeometry(4.3, 32), mats.glow, 0, 5.5, 7.1);
+    const spin = new THREE.Group(); spin.position.set(0, 5.5, 7.4);
+    for (let i = 0; i < 6; i++) {
+      const fin = M(rbox(0.8, 3.6, 0.5, 0.2), mats.dark);
+      fin.rotation.z = i * Math.PI / 3;
+      spin.add(fin);
+    }
+    c.add(ring, core, spin);
+    j.core = core;
+    j.reactorSpin = spin;
+    return null;
+  }
+  if (kind === 'fortress') {
+    c.add(M(rbox(25, 8, 3.4, 1.6), mats.accent, 0, 9.5, 6.6));
+    c.add(M(rbox(19, 5.5, 3, 1.4), mats.primary, 0, 2.6, 6.8));
+    for (const s of [-1, 1]) {
+      const plate = M(rbox(3, 7, 9, 1), mats.dark, s * 12.2, 9, 0);
+      plate.rotation.z = s * 0.15;
+      c.add(plate);
+    }
+    const core = M(rbox(10, 1.4, 0.8, 0.3), mats.glow, 0, 6, 8.4);
+    c.add(core);
+    j.core = core;
+    return null;
+  }
+  if (kind === 'missiles') {
+    c.add(M(rbox(16, 4, 3, 1.2), mats.accent, 0, 12.6, 6.2));
+    const core = M(new THREE.CircleGeometry(1.6, 20), mats.glow, 0, 12.6, 7.8);
+    c.add(core);
+    j.core = core;
+    c.add(M(rbox(15, 9.6, 1, 0.3), mats.dark, 0, 5.4, 6.4)); // back of the bay
+    const rack = new THREE.Group(); rack.position.set(0, 5.4, 5.2);
+    c.add(rack);
+    const tipMat = new THREE.MeshStandardMaterial({ color: '#000', emissive: '#ff3b2a', emissiveIntensity: 2.2 });
+    const muzzles = [];
+    for (const y of [2.1, -2.1]) {
+      for (const x of [-4.8, -1.6, 1.6, 4.8]) {
+        const tube = M(new THREE.CylinderGeometry(1.25, 1.25, 3.6, 12), mats.dark, x, y, 0);
+        tube.rotation.x = Math.PI / 2;
+        rack.add(tube);
+        const tip = M(new THREE.ConeGeometry(0.9, 1.8, 10), tipMat, x, y, 2.2);
+        tip.rotation.x = Math.PI / 2;
+        rack.add(tip);
+        const mz = new THREE.Object3D(); mz.position.set(x, y, 3.4);
+        rack.add(mz);
+        muzzles.push(mz);
+      }
+    }
+    const doors = [];
+    for (const s of [-1, 1]) {
+      const hinge = new THREE.Group(); hinge.position.set(s * 7.4, 5.4, 7.2);
+      c.add(hinge);
+      hinge.add(M(rbox(7.4, 9.4, 1.1, 0.4), mats.accent, -s * 3.7, 0, 0));
+      hinge.add(M(rbox(0.6, 7, 0.4, 0.2), mats.glow, -s * 6.9, 0, 0.6));
+      hinge.userData.side = s;
+      doors.push(hinge);
+    }
+    return { doors, rack, muzzles, open: 0 };
+  }
+  // standard Core Plate
+  c.add(M(rbox(16, 6, 3, 1.5), mats.accent, 0, 11, 6.2));
+  c.add(M(rbox(9, 5, 2, 1), mats.dark, -6, 3, 6.5));
+  c.add(M(rbox(9, 5, 2, 1), mats.dark, 6, 3, 6.5));
+  const coreRing = M(new THREE.TorusGeometry(3.2, 0.7, 10, 28), mats.dark, 0, 6, 6.8);
+  const core = M(new THREE.CircleGeometry(3, 28), mats.glow, 0, 6, 6.9);
+  c.add(coreRing, core);
+  j.core = core;
+  return null;
+}
+
+// Eases the Missile Bay doors open (target 1) or shut (target 0) and slides the rack out.
+export function poseBay(bay, dt, target) {
+  if (!bay) return;
+  bay.open += (target - bay.open) * Math.min(1, dt * 7);
+  const o = bay.open;
+  for (const d of bay.doors) d.rotation.y = d.userData.side * 1.9 * o;
+  bay.rack.position.z = 5.2 + 3.4 * Math.min(1, Math.max(0, o * 1.4 - 0.3));
 }
