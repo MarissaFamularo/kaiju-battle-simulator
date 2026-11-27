@@ -112,7 +112,7 @@ export class AlienShip {
       if (ref) { let dy = Math.atan2(ref.x - this.pos.x, ref.z - this.pos.z) - this.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); this.yaw += THREE.MathUtils.clamp(dy, -dt * 0.6, dt * 0.6); }
       // drop the next tripod: it lands already awake
       this.dropCd -= dt;
-      if (this.cargo.length && this.dropCd <= 0 && g.kaijus.filter((k) => !k.dead && !k.isShip).length < 6) {
+      if (this.cargo.length && this.dropCd <= 0 && g.kaijus.filter((k) => !k.dead && !k.isShip && !k.friendly).length < 6) {
         this.dropCd = sp.dropEvery;
         const type = this.cargo.shift();
         const gx = this.pos.x, gz = this.pos.z, gy = g.city.groundAt(gx, gz);
@@ -188,5 +188,88 @@ export class AlienShip {
     this.game.scene.remove(this.root);
     this.root.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
     for (const k in this.model.mats) this.model.mats[k].dispose();
+  }
+}
+
+// The Core Reactor (campaign part 4): the heart of the tripods' base under the Earth. It does not move.
+// It wakes up guard tripods until it is destroyed.
+export class CoreReactor {
+  constructor(game, { x = 0, z = 0 }) {
+    this.game = game;
+    this.isTripod = true; this.isShip = true;
+    this.type = 'reactor';
+    this.spec = { name: 'The Core Reactor', short: 'Reactor' };
+    this.cat = 4;
+    this.name = 'Core Reactor';
+    this.maxHp = this.hp = 3200;
+    this.radius = 40; this.height = 60; this.scale = 1;
+    this.pos = new THREE.Vector3(x, game.city.groundAt(x, z) + 75, z);
+    this.vel = new THREE.Vector3();
+    this.state = 'hover'; this.dead = false; this.emerging = false; this.revealed = true; this.removeMe = false;
+    this.cargo = []; this.guardCd = 10; this.deadT = 0; this.hitFlash = 0;
+    const root = this.root = new THREE.Group();
+    this.mats = {
+      core: new THREE.MeshStandardMaterial({ color: '#000', emissive: '#ff5a2a', emissiveIntensity: 3 }),
+      ring: new THREE.MeshStandardMaterial({ color: '#8b93a6', metalness: 0.7, roughness: 0.35, emissive: '#2a1010', emissiveIntensity: 1 }),
+      weak: new THREE.MeshStandardMaterial({ color: '#000', emissive: '#38d8ff', emissiveIntensity: 3 }),
+    };
+    root.add(new THREE.Mesh(new THREE.SphereGeometry(30, 28, 20), this.mats.core));
+    this.rings = [];
+    for (let i = 0; i < 3; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(44 + i * 9, 3, 8, 40), this.mats.ring); root.add(r); this.rings.push(r); }
+    this.eye = new THREE.Mesh(new THREE.SphereGeometry(9, 14, 10), this.mats.weak); this.eye.position.set(0, 0, 31); root.add(this.eye);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(8, 16, 80, 12), this.mats.ring); stem.position.y = -70; root.add(stem);
+    root.position.copy(this.pos);
+    game.scene.add(root);
+    this.hitCache = [{ p: this.pos.clone(), r: 34, weak: false }, { p: new THREE.Vector3(), r: 11, weak: true, name: 'EYE' }];
+  }
+
+  get alive() { return !this.dead; }
+
+  update(dt) {
+    const g = this.game;
+    this.hitFlash = Math.max(0, this.hitFlash - dt * 4);
+    if (this.dead) {
+      this.deadT += dt;
+      if (Math.random() < 0.7) g.fx.explosion(_a.copy(this.pos).add(_b.set((Math.random() - 0.5) * 120, (Math.random() - 0.5) * 80, (Math.random() - 0.5) * 120)), 0.8 + Math.random());
+      this.root.scale.setScalar(Math.max(0.01, 1 - this.deadT / 3));
+      if (this.deadT > 3) this.removeMe = true;
+      return;
+    }
+    this.rings.forEach((r, i) => { r.rotation.x = g.time * (0.6 + i * 0.3); r.rotation.y = g.time * (0.4 + i * 0.2) + i; });
+    this.mats.core.emissiveIntensity = 2.6 + Math.sin(g.time * 4) * 0.8 + this.hitFlash * 3;
+    // the eye follows the Jaeger
+    const m = g.mech;
+    if (m) this.root.rotation.y = Math.atan2(m.pos.x - this.pos.x, m.pos.z - this.pos.z);
+    this.eye.getWorldPosition(this.hitCache[1].p);
+    // wake up a guard now and then
+    this.guardCd -= dt;
+    if (this.guardCd <= 0 && g.state === 'play') {
+      this.guardCd = 16;
+      if (g.kaijus.filter((k) => !k.dead && !k.friendly && !k.isShip).length < (g.lowPower ? 3 : 4)) {
+        const a = Math.random() * 6.28, d = 150 + Math.random() * 120;
+        const type = ['attacker', 'gatling', 'boom', 'tank'][Math.floor(Math.random() * 4)];
+        g.spawnAwake(type, this.pos.x + Math.cos(a) * d, this.pos.z + Math.sin(a) * d);
+        g.nav.say('coreGuard', 'The reactor woke up another guard! Keep shooting the reactor!', 2, 20);
+      }
+    }
+  }
+
+  takeDamage(amount, point, dir, opts = {}) {
+    if (this.dead) return;
+    this.hp -= amount;
+    this.hitFlash = 1;
+    if (point && amount > 0) this.game.fx.sparks(point, opts.weak ? 30 : 12, opts.weak ? 'blue' : 'spark');
+    if (this.hp <= 0) {
+      this.hp = 0; this.dead = true; this.state = 'dead';
+      audio.play('explosion', this.pos, 1.5); audio.play('thunder', this.pos, 1.2);
+      this.game.shake(2.5, this.pos);
+      this.game.onTripodKilled(this);
+    }
+  }
+
+  remove() {
+    this.game.scene.remove(this.root);
+    this.root.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    for (const k in this.mats) this.mats[k].dispose();
   }
 }

@@ -254,7 +254,7 @@
     // ---- tap to skip the drop cinematic and the landing ----
     document.addEventListener('pointerdown', function () {
       if (app.state === 'drop' && app.drop && app.drop.skip) app.drop.skip();
-      else if (app.state === 'outro' && app.outro && app.outro.t > 1.5) app.outro.skip();
+      else if (app.state === 'outro' && app.cine && app.cine.t > 1.5) app.cine.skip();
       else if (app.state === 'game') tap('Space');
     }, true);
 

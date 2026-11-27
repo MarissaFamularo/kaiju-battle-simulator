@@ -27,7 +27,7 @@ export function unlockMission(i) {
   try { if (i > campaignProgress()) localStorage.setItem(STORE, String(Math.min(MISSIONS.length - 1, i))); } catch (e) { /* storage blocked */ }
 }
 
-const living = (g, pred = () => true) => g.kaijus.filter((k) => !k.dead && pred(k));
+const living = (g, pred = () => true) => g.kaijus.filter((k) => !k.dead && !k.friendly && pred(k)); // friends do not count as enemies
 const noneComing = (g) => !g.warnings.length && !living(g).length;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const beaten = (g, type) => g.stats.byType[type] || 0;                     // how many of this tripod type are destroyed
@@ -304,6 +304,109 @@ export const MISSIONS = [
     goal: (g) => (beaten(g, 'mothership') ? 'Destroy everything it dropped' : 'Shoot down the Mothership'),
     done: (g, s) => s.sent && beaten(g, 'mothership') >= 1 && noneComing(g),
     failed: () => null,
-    win: 'THE MOTHERSHIP IS DOWN! The fleet is pulling back. You did it, pilot. But more ships are still up there...',
+    win: 'THE MOTHERSHIP IS DOWN! The fleet is pulling back. But the kaiju are watching us, and they do not look angry any more...',
+  },
+  // ------------------------------------------------------------------ PART 4: THE WAR
+  // Patrick, 2026-11-27: "The people link with the kaiju to make friends and save their home. But ten new
+  // tripods, and now it's a war, so more campaign, more tripods spawn faster. Humans made their own tripods,
+  // looks very different. And one of the missions has us sneak into the tripods' base under the earth in its
+  // core. Could you make, when they sneak in, a funny animation?" The missions are Claude's calls.
+  {
+    title: 'The Link',
+    part: 4, friends: 1,
+    brief: 'Part 4: THE WAR. The aliens are wrecking the kaiju\'s home too. So a pilot tried something new: linking minds with a kaiju. It worked! A kaiju with a blue halo is your friend now. Fight three waves of brand new tripods together.',
+    start(g, s) { s.wave = 0; s.wait = 4; },
+    tick(g, s, dt) {
+      if (s.wave >= 3 || !noneComing(g)) return;
+      s.wait -= dt;
+      if (s.wait > 0) return;
+      s.wave++; s.wait = 5;
+      const cargo = [['tank', 'gatling'], ['blink', 'boom', 'boom'], ['magnet', 'leech']];
+      g.queueShip(cargo[s.wave - 1]);
+      g.hud.alert(`WAVE ${s.wave} OF 3`, 4, true);
+      if (!g.kaijus.some((k) => k.friendly && !k.dead && !k.isTripod)) g.spawnFriend(); // a new friend links in if the last one fell
+    },
+    goal: (g, s) => `Fight beside your kaiju friend: wave ${Math.max(1, s.wave || 1)}/3`,
+    done: (g, s) => s.wave >= 3 && g.stats.shipsGone >= 3 && noneComing(g),
+    failed: () => null,
+    win: 'You and your kaiju friend beat them all! More kaiju are linking with pilots every day.',
+  },
+  {
+    title: 'Our Own Walkers',
+    part: 4, walkers: 3,
+    brief: 'Humans have built their own walkers! They look nothing like the alien ones: white and yellow, with a square cabin and blue lights. Three Guardian Walkers are with you. Together, destroy the Commander Pod and its army.',
+    start(g, s) {
+      const types = ['commander', 'shadow', 'acid', 'attacker', 'gatling'];
+      const B = g.city.bound - 200;
+      types.forEach((type, i) => {
+        const a = g.view.yaw + (i - 2) * 0.5, d = 480 + Math.random() * 260;
+        g.spawnAwake(type, Math.max(-B, Math.min(B, g.mech.pos.x + Math.sin(a) * d)), Math.max(g.city.waterEdge + 150, Math.min(B, g.mech.pos.z + Math.cos(a) * d)));
+      });
+      s.sent = true;
+      g.hud.alert('THE COMMANDER AND ITS ARMY ARE AHEAD', 4, true);
+    },
+    goal: (g) => (beaten(g, 'commander') ? 'Destroy the rest of its army' : 'Destroy the Commander Pod and its army'),
+    done: (g, s) => s.sent && beaten(g, 'commander') >= 1 && noneComing(g),
+    failed: () => null,
+    win: 'The Commander is scrap! Our walkers work. The factories are building hundreds more.',
+  },
+  {
+    title: 'All-Out War',
+    part: 4, friends: 1, walkers: 2, scouts: 2,
+    brief: 'This is war. Tripods are coming faster than ever, and they are all different. You have a kaiju friend, two Guardian Walkers and two Scout Jaegers. Destroy 14 tripods!',
+    start(g, s) { s.sent = 0; s.wait = 3; },
+    tick(g, s, dt) {
+      s.wait -= dt;
+      if (s.sent >= 14 || s.wait > 0) return;
+      if (living(g).length + g.warnings.length >= (g.lowPower ? 4 : 5)) return;
+      s.wait = 6;
+      const types = ['tank', 'gatling', 'blink', 'boom', 'magnet', 'leech', 'acid', 'shadow', 'attacker', 'sprinter', 'flame', 'thunder'];
+      s.sent++;
+      g.queueTripod(types[Math.floor(Math.random() * types.length)], Math.random() < 0.7);
+    },
+    goal: (g) => `Destroy 14 tripods (${Math.min(14, g.stats.tripods)}/14)`,
+    done: (g, s) => s.sent >= 14 && g.stats.tripods >= 14 && noneComing(g),
+    failed: () => null,
+    win: 'Fourteen down! We are winning the war on the surface. Now we know where they are coming from: a base, deep under the Earth.',
+  },
+  {
+    title: 'Into the Core',
+    part: 4, core: true, cutscene: 'sneak',
+    brief: 'The tripods have a base under the Earth, in its core. You are going to sneak in through the crater, wearing a tripod costume. (It is not a very good costume.) Get past the guards, destroy the Core Reactor, then run back out before the cave falls in!',
+    startAt: (g) => { const c = g.city.places.crater; return { x: c.x + 330, z: c.z + 250 }; },
+    start(g, s) {
+      const c = g.city.places.crater;
+      s.exit = { x: g.mech.pos.x, z: g.mech.pos.z };
+      s.reactor = g.enterCore(c.x, c.z);
+      g.fp.craterCd = 99999; // the crater monsters are not home
+      for (const [type, a] of [['attacker', 0.6], ['gatling', 2.4], ['tank', 4.2]]) g.spawnAwake(type, c.x + Math.cos(a) * 190, c.z + Math.sin(a) * 190);
+      g.nav.say('core', 'You are in! This is the tripods\' base. The glowing ball in the middle is the Core Reactor. Stay out of the guards\' lights for as long as you can, then destroy it!', 3, 0);
+    },
+    tick(g, s, dt) {
+      if (!s.reactor || !s.reactor.dead) return;
+      if (s.escape === undefined) {
+        s.escape = 80;
+        g.hud.alert('THE CORE IS COLLAPSING! RUN BACK TO THE TUNNEL', 6, true);
+        g.nav.say('coreRun', 'The reactor is destroyed and the whole cave is coming down! Run back to where you came in. Go, go, go!', 3, 0);
+      }
+      s.escape -= dt;
+      if (Math.random() < 0.25) g.shake(0.5);
+      if (Math.random() < 0.3) { const a = Math.random() * 6.28, d = Math.random() * 500; g.fx.groundDust(g.mech.pos.clone().add({ x: Math.cos(a) * d, y: 4, z: Math.sin(a) * d }), 60, 20); }
+    },
+    goal: (g, s) => (s.escape === undefined ? 'Destroy the Core Reactor' : `RUN back to the tunnel! ${Math.max(0, Math.ceil(s.escape))} seconds  (${Math.round(dist(g.mech.pos, s.exit))} away)`),
+    done: (g, s) => s.escape !== undefined && s.escape < 76 && dist(g.mech.pos, s.exit) < 90, // (a few seconds in, so the collapse always gets to start)
+    failed: (g, s) => (s.escape !== undefined && s.escape <= 0 ? 'The core collapsed before you got out.' : null),
+    win: 'You made it out! The base under the Earth is gone. No more tripods will ever wake up down there.',
+  },
+  {
+    title: 'The Colossus',
+    part: 4, friends: 1, walkers: 2, scouts: 2,
+    brief: 'The aliens have one machine left: the Colossus Pod, the biggest walker ever built. Everyone is here for this one: your kaiju friend, the Guardian Walkers and the Scout Jaegers. Bring it down and save the home we all share!',
+    start(g, s) { g.queueTripod('colossus', true); g.queueTripod('gatling', true); s.sent = true; s.next = 30; },
+    tick(g, s, dt) { s.next -= dt; if (s.next <= 0 && beaten(g, 'colossus') < 1 && living(g).length < 3 && !g.warnings.length) { s.next = 30; g.queueTripod(['boom', 'blink', 'tank'][Math.floor(Math.random() * 3)], true); } },
+    goal: (g) => (beaten(g, 'colossus') ? 'Destroy the last tripods' : 'Bring down the Colossus Pod'),
+    done: (g, s) => s.sent && beaten(g, 'colossus') >= 1 && noneComing(g),
+    failed: () => null,
+    win: 'THE COLOSSUS HAS FALLEN! The war is over. Humans and kaiju saved their home together, and you led the way, pilot!',
   },
 ];

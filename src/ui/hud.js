@@ -116,7 +116,7 @@ export class HUD {
     let tk = null, td = Infinity;
     const ref = pilotOut ? g.pilot.pos : (m ? m.pos : null);
     if (ref) for (const k of g.kaijus) {
-      if (k.dead || k.emerging || k.cloaked) continue;
+      if (k.dead || k.emerging || k.cloaked || k.friendly) continue;
       const d = k.pos.distanceTo(ref);
       if (d < td && d < 900) { td = d; tk = k; }
     }
@@ -132,7 +132,7 @@ export class HUD {
     // weak spot markers
     let mi = 0;
     for (const k of g.kaijus) {
-      if (k.dead || k.emerging || !k.revealed || k.cloaked) continue; // no weak-spot marker on a cloaked Ghost Pod
+      if (k.dead || k.emerging || !k.revealed || k.cloaked || k.friendly) continue; // no weak-spot marker on a cloaked Ghost Pod
       for (const h of k.hitCache) {
         if (!h.weak) continue;
         _p.copy(h.p).project(g.camera);
@@ -264,7 +264,7 @@ export class HUD {
       let [x, y] = toR(k.pos.x, k.pos.z);
       let r = 4 + k.cat;
       { const d = Math.hypot(x, y); if (d > R - 6) { x *= (R - 6) / d; y *= (R - 6) / d; r *= 0.7; } } // far away: pinned to the rim, pointing the way
-      c.fillStyle = k.isTripod ? '#c77dff' : (k.emerging ? '#ff8a3a' : '#ff3b3b');
+      c.fillStyle = k.friendly ? '#5aff8a' : k.isTripod ? '#c77dff' : (k.emerging ? '#ff8a3a' : '#ff3b3b'); // friends are green
       c.shadowColor = c.fillStyle; c.shadowBlur = 8;
       c.beginPath();
       if (k.isTripod) { c.moveTo(x, y - r - 2); c.lineTo(x + r + 1, y + r); c.lineTo(x - r - 1, y + r); c.closePath(); } // tripods are triangles

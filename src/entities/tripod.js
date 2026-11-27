@@ -21,6 +21,7 @@ const BOLT = new THREE.Color('#cfe4ff');
 const WHITE = new THREE.Color('#bfefff');
 const RED = new THREE.Color('#ff2a1a');
 const GREEN = new THREE.Color('#7dffb0');
+const BLUE = new THREE.Color('#38a8ff');
 const HEAT_GEO = new THREE.SphereGeometry(2.4, 10, 8);
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3();
@@ -134,6 +135,20 @@ function buildTripod(spec) {
     emitter = new THREE.Object3D(); emitter.position.set(0, -8, 4); body.add(emitter);
     M(new THREE.ConeGeometry(3.2, 4, 12, 1, true), mats.strip, 0, -9.5, 4, body).castShadow = false;
   }
+  if (spec.human) {
+    // Human-made walker: looks nothing like the alien ones. White and yellow paint, a square cabin with a
+    // windshield, antennas, and blue running lights.
+    mats.hull.color.set('#e8ecf2'); mats.hull.emissive.set('#20242c');
+    mats.trim.color.set('#f2c230'); mats.trim.emissive.set('#3a2c08');
+    mats.strip.emissive.set('#38a8ff');
+    dome.visible = false; hull.scale.set(1.05, 0.5, 1.05);
+    M(new THREE.BoxGeometry(17, 9, 19), mats.hull, 0, 7, -1, body);
+    M(new THREE.BoxGeometry(18, 2, 20), mats.trim, 0, 12, -1, body);
+    mats.glass = new THREE.MeshStandardMaterial({ color: '#000', emissive: '#7fd8ff', emissiveIntensity: 1.6 });
+    M(new THREE.BoxGeometry(13, 4.5, 0.6), mats.glass, 0, 8, 8.6, body).castShadow = false;
+    for (const sx of [-6, 6]) M(new THREE.CylinderGeometry(0.25, 0.25, 14, 5), mats.dark, sx, 19, -8, body);
+    M(new THREE.BoxGeometry(5, 3, 0.3), mats.strip, 8.6, 24, -8, body).castShadow = false; // a little flag
+  }
   if (spec.tint) { mats.hull.color.set(spec.tint); mats.hull.emissive.set(spec.tint).multiplyScalar(0.18); }
   let bubble = null;
   if (spec.shield) {
@@ -209,8 +224,10 @@ export class Tripod {
     this.isTripod = true;
     this.type = type;
     this.spec = TRIPODS[type];
+    this.friendly = !!this.spec.human;   // human-made walkers fight for us
     this.cat = this.spec.radar || 2; // radar dot size
     this.name = `${this.spec.short} ${NAMES[nameIdx++ % NAMES.length]}`;
+    this.blinkCd = 4; this.leechT = 0;
     const S = this.spec.size;
     this.stand = STAND * S; this.l1 = L1 * S; this.l2 = L2 * S; this.footR = FOOT_R * S; // bigger types stand taller
     this.maxHp = this.hp = this.spec.hp;
@@ -431,7 +448,9 @@ export class Tripod {
   nearestKaiju(max) {
     let best = null, bd = max;
     for (const k of this.game.kaijus) {
-      if (k.isTripod || k.dead || k.emerging) continue;
+      if (k === this || k.dead || k.emerging || k.cloaked) continue;
+      // sides: alien tripods fight wild kaiju and everything on the human side; human walkers fight everything that is not
+      if (this.friendly ? k.friendly : (k.isTripod && !k.friendly)) continue;
       const d = k.pos.distanceTo(this.pos);
       if (d < bd) { bd = d; best = k; }
     }
@@ -469,16 +488,16 @@ export class Tripod {
     const m = g.mech;
     if (g.pilot && !g.pilot.dead && this.inLight(_d.copy(g.pilot.pos).setY(g.pilot.pos.y + 2), 3)) seen = { kind: 'pilot', ent: g.pilot };
     else if (m && !m.dead && this.inLight(m.chestPos(_d), m.radius)) seen = { kind: 'mech', ent: m };
-    if (seen && g.state === 'play') {
+    if (seen && !this.friendly && g.state === 'play') {
       this.spotT += dt;
       if (this.spotT > 0.35) { this.spotted(seen); return; }
     } else this.spotT = Math.max(0, this.spotT - dt);
     // kaiju and tripods fight each other
-    const k = this.nearestKaiju(280);
+    const k = this.nearestKaiju(this.friendly ? 520 : 280);
     if (k) { this.target = { kind: 'kaiju', ent: k }; this.lostT = 0; this.setState('attack'); return; }
     // scout Jaegers get attacked too, when the light finds one
     this.scoutT = (this.scoutT || 0) - dt;
-    if (this.scoutT <= 0) {
+    if (this.scoutT <= 0 && !this.friendly) {
       this.scoutT = 0.3;
       const sc = this.scoutInLight();
       if (sc) {
@@ -503,7 +522,7 @@ export class Tripod {
     // patrol: wander around near the Jaeger, sweeping the light
     if (!this.waypoint) {
       // roam: mostly it wanders off on its own; only now and then does it search where the Jaeger is
-      const near = m && Math.random() < 0.22;
+      const near = m && Math.random() < (this.friendly ? 0.85 : 0.22); // our walkers patrol near the Jaeger
       const ref = near ? m.pos : this.pos;
       const B = g.city.bound - 100;
       const a = Math.random() * Math.PI * 2, d = near ? 140 + Math.random() * 320 : 350 + Math.random() * 650;
@@ -540,7 +559,7 @@ export class Tripod {
     this.pos.addScaledVector(this.vel, dt);
     this.faceTarget(dt);
     if (this.stateT > (this.spec.immune ? 0.5 : 1.6)) { // the Uber Pod comes for you at once
-      if (this.target && this.target.kind !== 'scout' && this.capsuleCd <= 0 && this.game.mech && !this.game.mech.dead && this.game.aliens) {
+      if (!this.friendly && this.target && this.target.kind !== 'scout' && this.capsuleCd <= 0 && this.game.mech && !this.game.mech.dead && this.game.aliens) {
         this.capsuleCd = this.type === 'emperor' ? 90 : 45;
         this.game.aliens.launchCapsule(this.headPos().setY(this.pos.y + this.bodyY + 6), this.game.mech);
       }
@@ -604,7 +623,7 @@ export class Tripod {
     }
     // keep a firing distance
     const dist = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z);
-    const want = this.spec.mortar ? 380 : this.spec.flame ? 95 : this.spec.far ? 520 : this.spec.immune ? 150 : T.kind === 'kaiju' ? 170 : 210;
+    const want = this.spec.boom ? 10 : this.spec.leech ? 170 : this.spec.mortar ? 380 : this.spec.flame ? 95 : this.spec.far ? 520 : this.spec.immune ? 150 : T.kind === 'kaiju' ? 170 : 210;
     if (dist > want + 50 || !this.los) this.moveToward(tp, this.speed * 1.15, dt, 0, true);
     else if (dist < want - 80 && !this.spec.stomp) this.moveToward(_a.copy(this.pos).multiplyScalar(2).sub(tp), this.speed * 0.8, dt, 0, true);
     else { this.vel.multiplyScalar(Math.max(0, 1 - dt * 3)); this.pos.addScaledVector(this.vel, dt); }
@@ -629,6 +648,55 @@ export class Tripod {
         lightningStrike(g, x, z, true);
         g.kaijus.push(new Tripod(g, { type: sm.type, x, z }));
         g.nav.say('summon', `The ${this.spec.short} called for help! A ${TRIPODS[sm.type].name} is climbing out.`, 2, 10);
+      }
+    }
+    const player = T.kind === 'mech' || T.kind === 'pilot';
+    // Boom Pod: runs right up and blows itself up
+    if (this.spec.boom && dist < 58) {
+      const p = this.model.body.position.clone();
+      g.fx.explosion(p, 2.2); g.fx.groundDust(this.pos.clone().setY(this.pos.y + 3), 90, 50);
+      g.city.damageArea(p, 45, 700, { source: 'tripod', force: 1.8 });
+      audio.play('explosion', p, 1.3); g.shake(1.6, p);
+      if (T.kind === 'kaiju') T.ent.takeDamage(this.spec.boom * 3, tp.clone(), null, { source: 'tripod' });
+      else if (T.kind === 'scout') g.scouts.hurt(T.ent, this.spec.boom, this.pos);
+      else T.ent.takeDamage(this.spec.boom, this.pos);
+      this.die();
+      return;
+    }
+    // Blink Pod: teleports next to its target
+    if (this.spec.blink && player) {
+      this.blinkCd -= dt;
+      if (this.blinkCd <= 0 && dist > 130) {
+        this.blinkCd = this.spec.blink + Math.random() * 2;
+        const a = Math.random() * 6.28, d = 120 + Math.random() * 50, B = g.city.bound - 60;
+        const from = this.model.body.position.clone();
+        this.pos.set(THREE.MathUtils.clamp(tp.x + Math.cos(a) * d, -B, B), 0, THREE.MathUtils.clamp(tp.z + Math.sin(a) * d, g.city.waterEdge + 40, B));
+        this.pos.y = g.city.groundAt(this.pos.x, this.pos.z);
+        this.vel.set(0, 0, 0);
+        for (let i = 0; i < 3; i++) { this.restFoot(i, this.feet[i].pos); this.feet[i].t = -1; this.feet[i].planted = true; }
+        g.fx.flash(from, '#d07dff', 6000, 0.3); g.fx.ring(from, 4, 50, 0.5, '#d07dff', 0.7);
+        const to = this.pos.clone().setY(this.pos.y + this.bodyY);
+        g.fx.flash(to, '#d07dff', 6000, 0.3); g.fx.ring(to, 4, 50, 0.5, '#d07dff', 0.7);
+        audio.play('eject', this.pos, 0.9);
+        g.nav.say('blinkWarn', 'It teleported! Look around: it is right next to you!', 2, 14);
+      }
+    }
+    // Magnet Pod: pulls the Jaeger toward it
+    if (this.spec.magnet && T.kind === 'mech' && this.los && dist < 340 && dist > 60) {
+      T.ent.vel.addScaledVector(_c.set(this.pos.x - tp.x, 0, this.pos.z - tp.z).normalize(), this.spec.magnet * dt);
+      if (Math.random() < 0.4) g.fx.glow(_c.copy(this.model.body.position).lerp(tp, Math.random()), BLUE, 14, 0.25);
+      g.nav.say('magnetWarn', 'The Magnet Pod is pulling you in! Walk away from it!', 2, 16);
+    }
+    // Leech Pod: steals armor through a red beam and repairs itself with it
+    if (this.spec.leech && player && this.los && dist < 240) {
+      if (Math.random() < 0.7) g.fx.glow(_c.copy(this.model.body.position).lerp(tp, Math.random()), RED, 12, 0.25);
+      this.leechT -= dt;
+      if (this.leechT <= 0) {
+        this.leechT = 0.3;
+        const amt = this.spec.leech * 0.3;
+        if (T.kind === 'mech') { T.ent.hp = Math.max(1, T.ent.hp - amt); g.hud.hurt(0.08); } else T.ent.takeDamage(amt * 0.5);
+        this.hp = Math.min(this.maxHp, this.hp + amt * 3);
+        g.nav.say('leechWarn', 'The Leech Pod is stealing your armor! Break the beam: get behind something or get away!', 2, 16);
       }
     }
     // Flame Pod: breathes fire at anything right in front of it
@@ -675,7 +743,7 @@ export class Tripod {
     const speed = v.length();
     g.projectiles.fire({
       pos: from, dir: v.multiplyScalar(1 / speed), speed, gravity: -G, damage: this.spec.mortar * (T.kind === 'kaiju' ? 3 : 1),
-      owner: T.kind === 'kaiju' ? 'tripod' : 'kaiju', src: this, color: '#ff8a2a', size: 26, radius: 9, smash: 2, life: 7,
+      owner: T.kind === 'kaiju' ? 'tripod' : 'kaiju', src: this, color: this.spec.mortarColor || '#ff8a2a', size: this.spec.acid ? 18 : 26, radius: 9, smash: 2, life: 7, acid: !!this.spec.acid,
     });
     g.fx.flash(from, '#ff8a2a', 4000, 0.2);
     audio.play('plasma', this.pos, 1);
@@ -801,7 +869,7 @@ export class Tripod {
     g.fx.dust(_c.copy(p).setY(p.y + 2), 0.6 * power, 4);
     g.shake(0.2 * power, p);
     g.city.crushCars(p.x, p.z, 9);
-    if (g.camps && !this.spec.harvest) g.camps.stomp(p); // tripods flatten survivor camps (a Harvester wants them whole)
+    if (g.camps && !this.spec.harvest && !this.friendly) g.camps.stomp(p); // tripods flatten survivor camps (a Harvester wants them whole)
     g.city.damageArea(_c.copy(p).setY(p.y + 4), 8, 260 * power, { source: 'tripod', force: 1.1 });
   }
 
@@ -875,7 +943,7 @@ export class Tripod {
     m.head.getWorldPosition(this.hitCache[2].p);
     // lights and the scanner beam
     const lit = this.dead ? 0 : this.lit;
-    m.mats.lights.emissive.copy(WHITE).lerp(RED, this.alert);
+    m.mats.lights.emissive.copy(WHITE).lerp(this.friendly ? BLUE : RED, this.alert);
     m.mats.lights.emissiveIntensity = lit * (3.2 + Math.sin(g.time * (this.alert > 0.5 ? 14 : 3)) * 0.8) + this.hitFlash * 3;
     m.mats.weak.emissiveIntensity = this.dead ? 0.15 : 3 + Math.sin(g.time * 6) * 1.5;
     m.mats.beam.color.copy(m.mats.lights.emissive);

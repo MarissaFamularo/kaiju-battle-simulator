@@ -10,8 +10,9 @@ const TYPES = ['brute', 'stalker', 'hammer'];
 const _v = new THREE.Vector3();
 
 export class Kaiju {
-  constructor(game, { cat = 1, type = null, x = 0, z = 0, from = 'ground' }) {
+  constructor(game, { cat = 1, type = null, x = 0, z = 0, from = 'ground', friendly = false }) {
     this.game = game;
+    this.friendly = friendly;   // part 4: a kaiju a human has linked with. It only fights the aliens.
     const c = KAIJU_CATS[cat];
     this.cat = cat;
     this.type = type || TYPES[Math.floor(Math.random() * TYPES.length)];
@@ -51,6 +52,16 @@ export class Kaiju {
     this.jawOpen = 0;
     this.headUp = 0;
     this.knock = new THREE.Vector3();
+    if (friendly) {
+      this.name = 'Friend ' + this.name;
+      this.cd.spit = 1e9;
+      this.revealed = true;
+      // the link: a glowing blue halo over its head, so you always know it is on your side
+      this.haloMat = new THREE.MeshBasicMaterial({ color: '#38d8ff', transparent: true, opacity: 0.9 });
+      this.halo = new THREE.Mesh(new THREE.TorusGeometry(this.model.radius * 0.55, 1.4, 8, 30), this.haloMat);
+      this.halo.rotation.x = Math.PI / 2; this.halo.position.y = this.model.height * 1.15;
+      this.root.add(this.halo);
+    }
     game.scene.add(this.root);
     this.body = game.physics.kinematicBall(x, -50, z, this.radius * 0.9);
     this.root.position.set(x, this.pos.y - this.height * 1.1, z);
@@ -157,6 +168,18 @@ export class Kaiju {
 
   chooseTarget() {
     const g = this.game;
+    if (this.friendly) {
+      // linked kaiju: go for the nearest alien machine; with none around, stay near the Jaeger
+      let best = null, bd = 1000;
+      for (const t of g.kaijus) {
+        if (!t.isTripod || t.isShip || t.friendly || t.dead || t.emerging || t.cloaked) continue;
+        const d = t.pos.distanceTo(this.pos);
+        if (d < bd) { bd = d; best = t; }
+      }
+      const jm = g.mech;
+      this.target = best ? { kind: 'tripod', ent: best, pos: best.pos, radius: best.radius } : (jm && !jm.dead ? { kind: 'follow', ent: jm, pos: jm.pos, radius: 130 } : null);
+      return;
+    }
     const cands = [];
     const m = g.mech;
     if (m && !m.dead) {
@@ -237,7 +260,7 @@ export class Kaiju {
         this.cd.spit = 8 + Math.random() * 6;
         return;
       }
-      if (dist < reach && this.cd.attack <= 0 && this.charging <= 0) {
+      if (T.kind !== 'follow' && dist < reach && this.cd.attack <= 0 && this.charging <= 0) {
         if (facing) {
           const r = Math.random();
           let type = 'swipe';
@@ -338,20 +361,20 @@ export class Kaiju {
     // smash buildings in the strike zone
     g.city.damageArea(center, radius * 0.8, dmg * 1.5, { source: 'kaiju', force: 1.8 });
     // hit targets in range
-    const m = g.mech;
+    const m = this.friendly ? null : g.mech;   // a linked kaiju never hurts the Jaeger, the pilot or the helicopters
     if (m && !m.dead) {
       const d = Math.hypot(m.pos.x - center.x, m.pos.z - center.z);
       if (d < radius + m.radius && m.pos.y < center.y + 40) m.takeDamage(dmg, this.pos);
     }
-    if (g.pilot && !g.pilot.dead) {
+    if (!this.friendly && g.pilot && !g.pilot.dead) {
       const d = Math.hypot(g.pilot.pos.x - center.x, g.pilot.pos.z - center.z);
       if (d < radius + 4 && g.pilot.pos.y < center.y + 30) g.pilot.takeDamage(dmg * 0.6, this.pos);
     }
-    for (const u of g.military.targets()) {
+    if (!this.friendly) for (const u of g.military.targets()) {
       if (u.pos.distanceTo(center) < radius + 25) u.destroy(true);
     }
     for (const t of g.kaijus) {
-      if (!t.isTripod || t.isShip || t.dead || t.emerging) continue; // kaiju cannot reach a ship
+      if (!t.isTripod || t.isShip || t.dead || t.emerging || (this.friendly && t.friendly)) continue; // kaiju cannot reach a ship; friends do not hit friends
       if (Math.hypot(t.pos.x - center.x, t.pos.z - center.z) < radius + t.radius + 14) t.takeDamage(dmg * 1.6, t.hitCache[0].p.clone(), f, { source: 'kaiju', knockback: 30 });
     }
     if (T && T.kind === 'plant' && T.ent.alive) {

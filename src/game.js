@@ -16,7 +16,7 @@ import { Camps } from './entities/camps.js';
 import { MISSIONS, unlockMission } from './campaign.js';
 import { SpawnMenu } from './ui/spawnMenu.js';
 import { Scouts } from './entities/scouts.js';
-import { AlienShip } from './entities/ship.js';
+import { AlienShip, CoreReactor } from './entities/ship.js';
 import { TRIPODS } from './config.js';
 import { audio } from './audio.js';
 
@@ -95,7 +95,7 @@ export class Game {
     this.mission = mode === 'campaign' ? MISSIONS[this.missionIdx] : null;
     this.ms = { t: 0, started: false, s: {}, gaveLaser: false };
     // Part 3: all weapons are from the future, so every weapon can hurt every tripod. The old rule only holds in the part 1 and 2 story missions.
-    this.future = mode !== 'campaign' || (this.mission && this.mission.part === 3);
+    this.future = mode !== 'campaign' || (this.mission && this.mission.part >= 3);
     if (this.mission && this.mission.needsSpecial && !['sword', 'laser'].includes(cfg.left) && !['sword', 'laser'].includes(cfg.right)) {
       cfg.right = 'laser'; // nothing else can hurt an Uber Pod or the Emperor Pod
       this.ms.gaveLaser = true;
@@ -132,15 +132,16 @@ export class Game {
     this.attacked = false;
     audio.intensity = 0.2;
     this.clouds();
-    if ((this.mission && this.mission.part === 3) || mode === 'freeplay') this.skyFleet();
+    if ((this.mission && this.mission.part >= 3 && !this.mission.core) || mode === 'freeplay') this.skyFleet();
     if (grounded) this.startGrounded();
   }
 
   // The chapter 2 opening already showed the Jaeger landing, so skip the drop and start on the ground.
   startGrounded() {
     const m = this.mech;
-    m.setPosition(LAND.x, 0, LAND.z);
-    this.city.damageArea(new THREE.Vector3(LAND.x, 5, LAND.z), 75, 1400, { source: 'landing', noFx: true });
+    const at = this.mission && this.mission.startAt ? this.mission.startAt(this) : LAND; // some missions start somewhere else
+    m.setPosition(at.x, this.city.groundAt(at.x, at.z), at.z);
+    if (at === LAND) this.city.damageArea(new THREE.Vector3(LAND.x, 5, LAND.z), 75, 1400, { source: 'landing', noFx: true });
     this.carrier.g.visible = false;
     this.camPivot.copy(m.pos).add(new THREE.Vector3(0, CAM.height * m.scale, 0));
     this.beginPlay();
@@ -212,6 +213,47 @@ export class Game {
       ? 'That is the Mothership! It is enormous, and it is full of tripods. Aim for the glowing core underneath it!'
       : 'A ship is coming down out of orbit! Look up. It will drop tripods that are already awake. Shoot the glowing core underneath it!', 3, 0);
     return ship;
+  }
+
+  // Part 4: a human links with a kaiju, and it fights on our side (blue halo, green on the radar)
+  spawnFriend(cat = 3) {
+    const m = this.mech, a = Math.random() * 6.28, d = 130 + Math.random() * 70;
+    const k = new Kaiju(this, { cat, x: m.pos.x + Math.cos(a) * d, z: m.pos.z + Math.sin(a) * d, from: 'ground', friendly: true });
+    this.kaijus.push(k);
+    this.hud.alert('KAIJU LINKED! IT IS ON YOUR SIDE', 4);
+    this.nav.say('friend', `A pilot has linked minds with a kaiju! ${k.name} is fighting with us now. Look for the blue halo. You cannot hurt it, and it will not hurt you.`, 3, 0);
+    return k;
+  }
+
+  // Part 4: a walker built by humans. It looks nothing like the alien ones, and it fights for us.
+  spawnWalker() {
+    const m = this.mech, a = Math.random() * 6.28, d = 150 + Math.random() * 90;
+    const t = this.spawnAwake('guardian', m.pos.x + Math.cos(a) * d, m.pos.z + Math.sin(a) * d);
+    this.nav.say('walker', `That white and yellow walker is ours! Humans built it. ${t.name} will fight the alien tripods with you.`, 2, 30);
+    return t;
+  }
+
+  // Part 4: the tripods' base under the Earth. Turns wherever you are into a cave, and puts the Core Reactor in it.
+  enterCore(x, z) {
+    this.scene.fog = new THREE.Fog('#2a0a0a', 180, 1500);
+    this.scene.background = new THREE.Color('#12060a');
+    if (this.city.sky) this.city.sky.visible = false;
+    if (this.city.sun) this.city.sun.intensity *= 0.45;
+    const cave = new THREE.Group();
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(1700, 32, 20), new THREE.MeshBasicMaterial({ color: '#1c0b0d', side: THREE.BackSide, fog: false }));
+    dome.scale.y = 0.55; cave.add(dome);
+    const lava = new THREE.MeshBasicMaterial({ color: '#ff6a2a', fog: false });
+    for (let i = 0; i < 46; i++) {
+      const a = Math.random() * 6.28, r = 380 + Math.random() * 1000, h = 500 + Math.random() * 500;
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(6 + Math.random() * 10, 10 + Math.random() * 16, h, 7), lava);
+      p.position.set(Math.cos(a) * r, h / 2 - 60, Math.sin(a) * r); cave.add(p);
+    }
+    cave.position.set(x, 0, z);
+    this.scene.add(cave);
+    this.scene.add(new THREE.HemisphereLight('#ff8a5a', '#3a1010', 1.1));
+    this.reactor = new CoreReactor(this, { x, z });
+    this.kaijus.push(this.reactor);
+    return this.reactor;
   }
 
   // a tripod that is already awake and walking (part 3: nothing is asleep underground any more)
@@ -363,6 +405,7 @@ export class Game {
   }
 
   onTripodKilled(t) {
+    if (t.friendly) { this.hud.alert(`OUR ${t.name.toUpperCase()} WAS DESTROYED`, 3); this.nav.say('walkerDown', `We lost ${t.name}! The crew got out safely.`, 2, 10); return; }
     this.stats.kills++;
     this.stats.tripods++;
     this.stats.byType[t.type] = (this.stats.byType[t.type] || 0) + 1;
@@ -616,6 +659,7 @@ export class Game {
     if (this.app.settings.music) audio.startMusic();
     // scout Jaegers help out everywhere except the story modes
     if (this.mission && this.mission.scouts) this.scouts.deploy(this.mission.scouts, this.mission.scoutPower || 1); // some missions bring a squadron
+    if (this.mission) { for (let i = 0; i < (this.mission.friends || 0); i++) this.spawnFriend(); for (let i = 0; i < (this.mission.walkers || 0); i++) this.spawnWalker(); }
     if (!['campaign', 'mission'].includes(this.mode)) {
       this.scouts.deploy(this.mode === 'freeplay' ? 3 : 2);
       setTimeout(() => this.nav.say('scouts', 'Scout Jaegers are patrolling with you. They are the small colored arrows on your radar, and they shoot at any bad guy they find.', 2, 0), 38000);
@@ -656,7 +700,7 @@ export class Game {
       s.delay -= dt;
       if (s.delay <= 0) { this.spawnQueue.splice(i, 1); if (s.cat === 'T') this.queueTripod(); else this.queueKaiju(s.cat); }
     }
-    const living = this.kaijus.filter((k) => !k.dead).length;
+    const living = this.kaijus.filter((k) => !k.dead && !k.friendly).length;
     if (this.waveState === 'pre') {
       this.waveTimer -= dt;
       if (this.waveTimer <= 0) this.startWave(0);
@@ -682,12 +726,12 @@ export class Game {
   updateFreePlay(dt) {
     const fp = this.fp;
     fp.t -= dt;
-    const busy = this.kaijus.filter((k) => !k.dead).length + this.warnings.length;
+    const busy = this.kaijus.filter((k) => !k.dead && !k.friendly).length + this.warnings.length;
     if (fp.t <= 0) {
-      if (busy < 3) {
+      if (busy < (this.lowPower ? 4 : 5)) { // it is a war now: more at once, and sooner
         fp.count++;
-        fp.t = 40 + Math.random() * 30;
-        if (Math.random() < 0.5) this.queueTripod(fp.count > 9 && Math.random() < 0.15 && !this.kaijus.some((k) => k.type === 'emperor' && !k.dead) ? 'emperor' : fp.count > 6 && Math.random() < 0.25 ? 'uber' : fp.count > 2 && Math.random() < 0.5 ? ['sprinter', 'shield', 'mortar', 'ghost', 'splitter', 'titan', 'sniper', 'repair', 'flame', 'thunder'][Math.floor(Math.random() * 10)] : 'attacker'); // an Uber Pod now and then, later on; the Emperor Pod is rare
+        fp.t = 24 + Math.random() * 18;
+        if (Math.random() < 0.5) this.queueTripod(fp.count > 9 && Math.random() < 0.15 && !this.kaijus.some((k) => k.type === 'emperor' && !k.dead) ? 'emperor' : fp.count > 6 && Math.random() < 0.25 ? 'uber' : fp.count > 2 && Math.random() < 0.5 ? ['sprinter', 'shield', 'mortar', 'ghost', 'splitter', 'titan', 'sniper', 'repair', 'flame', 'thunder', 'tank', 'gatling', 'blink', 'boom', 'magnet', 'leech', 'commander', 'acid', 'shadow'][Math.floor(Math.random() * 19)] : 'attacker'); // an Uber Pod now and then, later on; the Emperor Pod is rare
         else this.queueKaiju(Math.min(5, 1 + Math.floor(fp.count / 3) + (Math.random() < 0.3 ? 1 : 0)));
         audio.intensity = Math.min(1, 0.4 + fp.count * 0.04);
       } else fp.t = 10;
@@ -741,7 +785,7 @@ export class Game {
   updateReveal(dt) {
     const ref = this.pilot ? this.pilot.pos : this.mech.pos;
     for (const k of this.kaijus) {
-      if (k.dead || k.emerging || k.revealed || k.isTripod) continue; // the scan is for kaiju; tripods and ships have no weak-spot list
+      if (k.dead || k.emerging || k.revealed || k.isTripod || k.friendly) continue; // the scan is for kaiju; tripods and ships have no weak-spot list
       const d = k.pos.distanceTo(ref);
       const onScreen = (() => {
         const p = k.pos.clone().setY(k.height * 0.5).project(this.camera);
@@ -781,7 +825,7 @@ export class Game {
   hitKaiju(point, radius, dmg, dir, opts = {}) {
     let result = null;
     for (const k of this.kaijus) {
-      if (k.dead || k.emerging) continue;
+      if (k.dead || k.emerging || k.friendly) continue;
       if (k.pos.distanceTo(point) > k.height * 1.6 + radius) continue;
       let best = null;
       for (const h of k.hitCache) {
@@ -806,7 +850,7 @@ export class Game {
     const dir = this.viewDir();
     let best = 2500, info = null;
     for (const k of this.kaijus) {
-      if (k.dead || k.emerging) continue;
+      if (k.dead || k.emerging || k.friendly) continue;
       for (const h of k.hitCache) {
         // ray-sphere
         const oc = origin.clone().sub(h.p);
@@ -927,6 +971,7 @@ export class Game {
   }
 
   onKaijuKilled(k) {
+    if (k.friendly) { this.hud.alert(`${k.name.toUpperCase()} IS DOWN`, 3); this.nav.say('friendDown', `${k.name} cannot fight any more. It fought bravely for its home.`, 2, 0); return; }
     this.stats.kills++;
     this.fieldRepair();
     this.hud.alert(`${k.name.toUpperCase()} DEFEATED`, 3);

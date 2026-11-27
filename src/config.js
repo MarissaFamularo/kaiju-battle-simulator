@@ -260,6 +260,65 @@ Object.assign(TRIPODS, {
   },
 });
 
+// Part 4: THE WAR (Patrick, 2026-11-27): "ten new tripods". All ten are Claude's calls.
+Object.assign(TRIPODS, {
+  tank: {
+    id: 'tank', name: 'Tank Pod', short: 'Tank', size: 1.05, hull: 1.35, tint: '#5f6b4a',
+    hp: 1500, speed: 10, laser: 0, fireEvery: 99, big: 22, bigEvery: 4.5, range: 360, cone: 0.22,
+    intro: 'A Tank Pod! Thick armor and one big cannon. It is slow, so keep moving and its shots will miss.',
+  },
+  gatling: {
+    id: 'gatling', name: 'Gatling Pod', short: 'Gatling', size: 1, hull: 1, tint: '#8a8f3a',
+    hp: 800, speed: 17, laser: 2.5, minigun: 12, fireEvery: 2.4, range: 320, cone: 0.22,
+    intro: 'A Gatling Pod! It sprays a whole stream of tiny lasers. Get behind something!',
+  },
+  blink: {
+    id: 'blink', name: 'Blink Pod', short: 'Blink', size: 0.95, hull: 0.9, tint: '#b04ad8',
+    hp: 650, speed: 16, laser: 7, fireEvery: 2.4, range: 320, cone: 0.22, blink: 7,
+    intro: 'A Blink Pod! It teleports. One second it is far away, the next it is right beside you!',
+  },
+  boom: {
+    id: 'boom', name: 'Boom Pod', short: 'Boom', size: 0.8, hull: 0.9, tint: '#e0622a',
+    hp: 380, speed: 30, laser: 0, fireEvery: 99, boom: 70, range: 300, cone: 0.24,
+    intro: 'A Boom Pod! It runs straight at you and blows itself up. Shoot it before it gets close!',
+  },
+  magnet: {
+    id: 'magnet', name: 'Magnet Pod', short: 'Magnet', size: 1.1, hull: 1.1, tint: '#3a6ad8',
+    hp: 900, speed: 13, laser: 6, fireEvery: 3, range: 360, cone: 0.24, magnet: 46,
+    intro: 'A Magnet Pod! It pulls your Jaeger toward it. Walk away from it, or sprint sideways!',
+  },
+  leech: {
+    id: 'leech', name: 'Leech Pod', short: 'Leech', size: 1, hull: 1, tint: '#7a2f6a',
+    hp: 800, speed: 19, laser: 0, fireEvery: 99, leech: 14, range: 300, cone: 0.22,
+    intro: 'A Leech Pod! Its red beam steals your armor to repair itself. Break the beam by getting behind a building.',
+  },
+  commander: {
+    id: 'commander', name: 'Commander Pod', short: 'Commander', size: 1.3, hull: 1.2, tint: '#3a3f58', boss: '#ffd23a',
+    hp: 1400, speed: 14, laser: 7, fireEvery: 2.8, range: 380, cone: 0.24, summon: { type: 'attacker', every: 22, max: 2 },
+    intro: 'A Commander Pod! It calls Attacker Tripods to help it. Take out the Commander and the calling stops.',
+  },
+  acid: {
+    id: 'acid', name: 'Acid Pod', short: 'Acid', size: 1, hull: 1.05, tint: '#4a9a2a',
+    hp: 750, speed: 14, laser: 0, fireEvery: 3.4, mortar: 12, mortarCount: 2, mortarColor: '#8dff3a', acid: true, range: 460, cone: 0.24,
+    intro: 'An Acid Pod! It lobs two green blobs at a time. Do not stand where they land.',
+  },
+  shadow: {
+    id: 'shadow', name: 'Shadow Pod', short: 'Shadow', size: 1.1, hull: 0.9, tint: '#2a2a3a',
+    hp: 600, speed: 14, laser: 0, fireEvery: 99, big: 22, bigEvery: 5.5, bigSpeed: 760, bigRange: 900, range: 760, cone: 0.12, far: 900, lose: 5, cloak: true,
+    intro: 'A Shadow Pod! An invisible sniper. Watch for its thin light on the ground, and follow the shot back to it.',
+  },
+  colossus: {
+    id: 'colossus', name: 'Colossus Pod', short: 'Colossus', size: 2.6, hull: 2.2, tint: '#4a4f5c', boss: '#ff3a3a', radar: 4,
+    hp: 4200, speed: 8, laser: 5, minigun: 4, fireEvery: 3.2, stomp: 60, range: 460, cone: 0.28, lose: 12,
+    intro: 'The Colossus Pod! The biggest walking machine there has ever been. Stay out from under its feet, and hit it with everything!',
+  },
+  // "Humans made their own tripods, looks very different": this one is on YOUR side.
+  guardian: {
+    id: 'guardian', name: 'Guardian Walker', short: 'Guardian', size: 1, hull: 1, human: true,
+    hp: 1100, speed: 18, laser: 8, fireEvery: 2.2, range: 340, cone: 0.24, lose: 8,
+  },
+});
+
 // Invasion mode waves: numbers are kaiju categories, 'T' is an attacker tripod.
 export const INVASION_WAVES = [
   ['T'],

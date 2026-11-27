@@ -89,7 +89,7 @@ export class Military {
   pickKaiju(from) {
     let best = null, bd = Infinity;
     for (const k of this.game.kaijus) {
-      if (k.dead || k.emerging) continue;
+      if (k.dead || k.emerging || k.friendly) continue;
       const d = k.pos.distanceTo(from);
       if (d < bd) { bd = d; best = k; }
     }

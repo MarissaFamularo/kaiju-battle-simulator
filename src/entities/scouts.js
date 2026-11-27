@@ -65,7 +65,7 @@ export class Scouts {
   nearestEnemy(s) {
     let best = null, bd = SEE;
     for (const k of this.game.kaijus) {
-      if (k.dead || k.emerging) continue;
+      if (k.dead || k.emerging || k.friendly) continue;
       const d = Math.hypot(k.pos.x - s.pos.x, k.pos.z - s.pos.z);
       if (d < bd) { bd = d; best = k; }
     }

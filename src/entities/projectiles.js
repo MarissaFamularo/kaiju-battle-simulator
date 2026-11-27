@@ -60,7 +60,8 @@ export class Projectiles {
         // vs kaiju and tripods (a tripod's lasers only hurt kaiju)
         for (const k of g.kaijus) {
           if (k.dead || k.emerging || k === p.src) continue;
-          if (p.owner === 'tripod' && k.isTripod) continue;
+          const srcFriendly = !!(p.src && p.src.friendly);
+          if (p.owner === 'tripod' ? ((k.isTripod && !!k.friendly === srcFriendly) || (k.friendly && srcFriendly)) : k.friendly) continue; // machines do not shoot their own side; you cannot hit your friends
           if (k.pos.distanceTo(p.pos) > k.height * 1.5 + 60) continue;
           let best = null;
           for (const h of k.hitCache) {

@@ -155,6 +155,27 @@ Built the same day. **Claude's calls:**
 - Missions 16 to 19: Years Later, They Are All Awake, More and More Ships, The Mothership.
 - Code: `src/entities/ship.js`, `WEAPONS` in `src/config.js`, `src/campaign.js`.
 
+## Part 4: The War
+
+Patrick, 2026-11-27, in his words: "The people link with the kaiju to make friends and save their home. But
+ten new tripods, and now it's a war, so more campaign, more tripods spawn faster. Humans made their own
+tripods, looks very different. And one of the missions has us sneak into the tripods' base under the earth
+in its core. Could you make, when they sneak in, a funny animation?"
+
+Built the same day. **Claude's calls:**
+- **Linked kaiju**: a friendly kaiju with a blue halo (green on the radar). It only attacks alien machines, it
+  cannot hurt the Jaeger, and the Jaeger cannot hurt it.
+- **Guardian Walker**: the human-made tripod. White and yellow, square cabin with a windshield, antennas, a
+  flag, blue lights. It fights alien tripods and wild kaiju.
+- **Ten new tripods**: Tank, Gatling, Blink (teleports), Boom (runs up and explodes), Magnet (pulls you in),
+  Leech (steals armor to repair itself), Commander (calls Attackers), Acid (lobs green blobs), Shadow
+  (invisible sniper), Colossus (the biggest walker).
+- **War pace**: in Free Play enemies arrive about every 24 to 42 seconds instead of 40 to 70, with up to 5 at once.
+- **The funny sneak-in** (`src/scenes/sneak.js`): the Jaeger tiptoes past a guard tripod in a terrible tripod
+  costume, says BEEP BOOP, the costume falls off with a clang, the guard is asleep, the Jaeger runs.
+- **The Core**: the crater becomes a cave with the Core Reactor in it. Destroy it, then run back out in 80 seconds.
+- Missions 20 to 24: The Link, Our Own Walkers, All-Out War, Into the Core, The Colossus.
+
 ## Build order
 
 1. **(Built 2026-11-27.) Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,

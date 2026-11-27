@@ -10,6 +10,8 @@ import { HUD } from './ui/hud.js';
 import { Hangar, loadSettings } from './ui/hangar.js';
 import { DropScene } from './scenes/drop.js';
 import { Outro } from './scenes/outro.js';
+import { SneakScene } from './scenes/sneak.js';
+import { MISSIONS } from './campaign.js';
 import { Game } from './game.js';
 import { audio } from './audio.js';
 
@@ -62,6 +64,8 @@ class App {
     this.hangar = new Hangar(this);
     this.drop = new DropScene(this);
     this.outro = new Outro(this); // the ending of the campaign
+    this.sneak = new SneakScene(this); // part 4: sneaking into the core
+    this.cine = this.outro; // whichever of those two is playing
     this.applySettings(this.settings);
     this.setLoad(1, 'Ready!');
 
@@ -188,6 +192,14 @@ class App {
     this.nav.clear();
     this.input.enabled = true;
     // chapter 2 modes open with the invasion story the first time, then a short drop
+    // a mission with its own opening scene (part 4: the funny sneak into the core)
+    const mis = this.hangar.settings.mode === 'campaign' ? MISSIONS[this.hangar.settings.mission || 0] : null;
+    if (mis && mis.cutscene === 'sneak') {
+      this.state = 'outro';
+      this.cine = this.sneak;
+      this.sneak.start(this.hangar.cfg, () => this.startGame(true));
+      return;
+    }
     const ch2 = ['campaign', 'freeplay', 'invasion'].includes(this.hangar.settings.mode);
     const variant = !ch2 ? 'classic' : this.introSeen ? 'invasionShort' : 'invasion';
     if (ch2) this.introSeen = true;
@@ -235,7 +247,7 @@ class App {
 
   onKey(e) {
     if (this.state === 'drop' && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) this.drop.skip();
-    if (this.state === 'outro' && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) { this.outro.skip(); return; }
+    if (this.state === 'outro' && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) { this.cine.skip(); return; }
     if (this.state === 'play' && e.code === 'Escape' && !this.input.locked) this.pause();
     else if (this.state === 'paused' && e.code === 'Escape' && !this.input.locked) this.resume();
   }
@@ -245,6 +257,7 @@ class App {
     if (win && s.campaign && s.campaign.ending === 'planet' && !s.afterOutro) {
       this.state = 'outro';
       this.input.unlock();
+      this.cine = this.outro;
       this.outro.start(() => this.showEnd(win, { ...s, afterOutro: true }));
       return;
     }
@@ -255,7 +268,7 @@ class App {
     end.classList.toggle('end-defeat', !win);
     const camp = s.campaign;
     $('end-title').textContent = win ? (camp ? (camp.last ? 'CAMPAIGN COMPLETE' : 'MISSION COMPLETE') : 'VICTORY') : s.title;
-    $('end-sub').textContent = win ? (camp ? (camp.last ? `${this.hangar.cfg.name} shot down the Mothership! More ships are still up there...` : `Mission ${camp.n}: ${camp.title}`) : `${this.hangar.cfg.name} saved the city!`) : s.sub;
+    $('end-sub').textContent = win ? (camp ? (camp.last ? `${this.hangar.cfg.name}, the kaiju and the walkers won the war together!` : `Mission ${camp.n}: ${camp.title}`) : `${this.hangar.cfg.name} saved the city!`) : s.sub;
     $('end-stats').innerHTML = [
       ['Kaiju defeated', s.kills - (s.tripods || 0)], ['Tripods destroyed', s.tripods || 0], ...(s.saved !== null && s.saved !== undefined ? [['Survivors saved', s.saved]] : []), ['Weak spot hits', s.weak], ['Buildings smashed', s.buildings], ['Damage dealt', s.damage],
       ['Waves reached', s.wave], ['Power plant', `${s.plant}%`], ['Battle time', s.time],
@@ -277,8 +290,8 @@ class App {
       this.drop.update(dt, t);
       scene = this.drop.scene; camera = this.drop.camera;
     } else if (this.state === 'outro') {
-      scene = this.outro.scene; camera = this.outro.camera; // set these first: the scene can end inside update
-      this.outro.update(dt);
+      scene = this.cine.scene; camera = this.cine.camera; // set these first: the scene can end inside update
+      this.cine.update(dt);
     } else {
       if (this.state !== 'paused' && this.state !== 'end') this.game.update(dt);
       else if (this.state === 'end') this.game.update(dt * 0.3);

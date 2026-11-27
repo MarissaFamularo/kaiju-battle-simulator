@@ -19,6 +19,16 @@ const CHOICES = [
   { id: 'repair', label: 'Repair Pod' },
   { id: 'flame', label: 'Flame Pod' },
   { id: 'thunder', label: 'Thunder Pod' },
+  { id: 'tank', label: 'Tank Pod' },
+  { id: 'gatling', label: 'Gatling Pod' },
+  { id: 'blink', label: 'Blink Pod' },
+  { id: 'boom', label: 'Boom Pod' },
+  { id: 'magnet', label: 'Magnet Pod' },
+  { id: 'leech', label: 'Leech Pod' },
+  { id: 'commander', label: 'Commander Pod' },
+  { id: 'acid', label: 'Acid Pod' },
+  { id: 'shadow', label: 'Shadow Pod' },
+  { id: 'colossus', label: 'Colossus Pod' },
   { id: 'sprinterBoss', label: 'Boss Pod: Boss Sprinter' },
   { id: 'shieldBoss', label: 'Boss Pod: Boss Shield' },
   { id: 'mortarBoss', label: 'Boss Pod: Boss Mortar' },
@@ -26,6 +36,8 @@ const CHOICES = [
   { id: 'splitterBoss', label: 'Boss Pod: Boss Splitter' },
   { id: 'stormking', label: 'Boss Pod: Storm King' },
   { id: 'overlord', label: 'Boss Pod: Overlord' },
+  { id: 'friend', label: 'FRIEND: a linked kaiju', ally: true },
+  { id: 'walker', label: 'FRIEND: a human Guardian Walker', ally: true },
   { id: 'ship', label: 'Alien Dropship (drops 2, then leaves)' },
   { id: 'mothership', label: 'The Mothership' },
 ];
@@ -79,7 +91,12 @@ export class SpawnMenu {
     const g = this.game, c = this.list()[i];
     this.close();
     if (!c) return;
-    const busy = g.kaijus.filter((k) => !k.dead).length + g.warnings.length;
+    if (c.ally) {
+      if (g.kaijus.filter((k) => !k.dead && k.friendly).length >= (g.lowPower ? 2 : 4)) { g.hud.alert('YOU HAVE ENOUGH FRIENDS OUT RIGHT NOW', 2.5); return; }
+      if (c.id === 'friend') g.spawnFriend(); else g.spawnWalker();
+      return;
+    }
+    const busy = g.kaijus.filter((k) => !k.dead && !k.friendly).length + g.warnings.length;
     if (busy >= (g.lowPower ? 6 : MAX_ENEMIES)) { g.hud.alert('TOO MANY BAD GUYS! BEAT SOME FIRST', 2.5); return; }
     if (/^k\d$/.test(c.id)) g.queueKaiju(+c.id[1]);
     else if (c.id === 'ship') g.queueShip(['attacker', ['sprinter', 'shield', 'mortar', 'ghost', 'splitter', 'sniper', 'repair', 'flame', 'thunder'][Math.floor(Math.random() * 9)]]);
