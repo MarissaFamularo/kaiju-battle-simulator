@@ -42,6 +42,8 @@
     '.kbs-small{width:56px;height:56px;font-size:12px}',
     '#kbs-pause{left:18px;top:118px}#kbs-voice{left:84px;top:118px}',
     /* move HUD pieces out of the thumbs' way */
+    /* #hud is position:fixed, so it is its own layer: lift the whole HUD above the touch layer or the tiles can never be tapped (it ignores touches except on the tiles) */
+    'body.kbs-touch #hud{z-index:5}',
     /* the tiles stay between the joystick and the fire buttons, and wrap upward if there are a lot */
     'body.kbs-touch #abilities{left:200px;right:284px;bottom:12px;z-index:6;justify-content:center;flex-wrap:wrap-reverse;gap:6px}',
     'body.kbs-touch #abilities .ab{width:66px;height:62px}',
