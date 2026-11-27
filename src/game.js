@@ -14,6 +14,7 @@ import { Tripod, lightningStrike } from './entities/tripod.js';
 import { Aliens } from './entities/aliens.js';
 import { Camps } from './entities/camps.js';
 import { MISSIONS, unlockMission } from './campaign.js';
+import { SpawnMenu } from './ui/spawnMenu.js';
 import { TRIPODS } from './config.js';
 import { audio } from './audio.js';
 
@@ -27,6 +28,7 @@ export class Game {
     this.app = app;
     this.nav = app.nav;
     this.hud = app.hud;
+    this.spawnMenu = new SpawnMenu(this);
     this.input = app.input;
     this.camera = new THREE.PerspectiveCamera(58, 1, 1, 9000);
     this.view = { yaw: Math.PI, pitch: -0.05 };
@@ -347,6 +349,12 @@ export class Game {
 
   handleKeys() {
     const input = this.input;
+    // spawn menu: B opens it, then a number picks (the numbers do not call air support while it is open)
+    if (input.pressed('KeyB')) this.spawnMenu.toggle();
+    if (this.spawnMenu.open) {
+      for (let i = 1; i <= 9; i++) if (input.pressed(`Digit${i}`)) { this.spawnMenu.pick(i - 1); break; }
+      return;
+    }
     if (input.pressed('KeyQ') && this.cooldowns.drones <= 0) {
       if (this.drones.launchSwarm()) this.cooldowns.drones = BACKUP.drones.cooldown;
     }
@@ -926,6 +934,7 @@ export class Game {
   }
 
   stop() {
+    this.spawnMenu.close();
     this.hud.show(false);
     this.hud.clearTransient();
     audio.stopMusic();

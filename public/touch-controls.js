@@ -40,7 +40,7 @@
     '#kbs-jump{width:84px;height:84px;right:34px;bottom:18px}',
     '#kbs-eject{width:84px;height:84px;right:160px;bottom:162px;border-color:rgba(125,255,176,.85);white-space:pre}',
     '.kbs-small{width:56px;height:56px;font-size:12px}',
-    '#kbs-pause{left:18px;top:118px}#kbs-voice{left:84px;top:118px}',
+    '#kbs-pause{left:18px;top:118px}#kbs-voice{left:84px;top:118px}#kbs-spawn{left:150px;top:118px;border-color:rgba(255,210,58,.8)}',
     /* move HUD pieces out of the thumbs' way */
     /* #hud is position:fixed, so it is its own layer: lift the whole HUD above the touch layer or the tiles can never be tapped (it ignores touches except on the tiles) */
     'body.kbs-touch #hud{z-index:5}',
@@ -113,6 +113,7 @@
     var ejectB = el('div', 'kbs-eject', 'kbs-btn', 'GET\nOUT', root); // get out of / back into the Jaeger (F)
     var pauseB = el('div', 'kbs-pause', 'kbs-btn kbs-small', 'II', root);
     var voiceB = el('div', 'kbs-voice', 'kbs-btn kbs-small', 'VOICE', root);
+    var spawnB = el('div', 'kbs-spawn', 'kbs-btn kbs-small', 'SPAWN', root); // opens the spawn menu (B)
     fireL.style.whiteSpace = fireR.style.whiteSpace = 'pre';
 
     function capture(t, id) { try { t.setPointerCapture(id); } catch (err) { /* simulated pointer */ } }
@@ -200,6 +201,7 @@
     holdButton(jump, function () { press('Space'); }, function () { release('Space'); }, false);
     holdButton(ejectB, function () { tap('KeyF'); }, function () {}, false);
     holdButton(pauseB, function () { if (app.state === 'play') app.pause(); }, function () {}, false);
+    holdButton(spawnB, function () { tap('KeyB'); }, function () {}, false);
     holdButton(voiceB, function () { tap('KeyV'); }, function () {}, false);
 
     // ---- ability tiles at the bottom become buttons ----

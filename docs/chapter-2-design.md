@@ -78,6 +78,10 @@ Kaiju and tripods also **fight each other**.
   survivor camps and bunkers.
 - The original city game stays as its own mode.
 
+- **Spawn the bad guys on command** (Patrick, 2026-11-27). **(Claude's calls:** B key or the SPAWN
+  button on iPad opens a menu of kaiju sizes and every tripod type; up to 8 enemies at once; not in
+  Campaign or the classic Mission.) Code: `src/ui/spawnMenu.js`.
+
 ## The intro (instead of a loading screen)
 
 1. You are looking at the Earth.

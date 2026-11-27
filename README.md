@@ -25,6 +25,7 @@ A game by Patrick. Build your own Jaeger, drop from a space station into a big 3
 | E | Fire chest missiles (Missile Bay chest only) |
 | F | Eject from the Jaeger / climb back in |
 | V | Navigator voice on/off |
+| B | Spawn menu: pick any kaiju or tripod to appear (every mode except Campaign and Mission; SPAWN button on iPad) |
 | K | Summon a kaiju (Free Smash mode) |
 | T | Summon a tripod (Free Smash mode) |
 | R | Repair armor with scrap + energy (Free Play) |
