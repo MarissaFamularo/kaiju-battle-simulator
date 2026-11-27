@@ -967,10 +967,7 @@ export class Tripod {
       }
     } else {
       if (this.deadT < 9 && Math.random() < 0.2) g.fx.fire(this.model.body.position, 1);
-      if (this.deadT > 14) {
-        this.root.position.y -= dt * 4; // root sits at the origin, so this sinks the whole wreck
-        if (this.deadT > 22) this.removeMe = true;
-      }
+      // the wreck stays where it fell (Patrick, 2026-11-27); the game clears the oldest ones when there are too many
     }
   }
 

@@ -7,10 +7,10 @@ import { buildInvasionProps, resetInvasion, cleanupInvasion, updateInvasion } fr
 
 const $ = (id) => document.getElementById(id);
 
-const planetVert = `
+export const planetVert = `
   varying vec3 vN; varying vec3 vW; varying vec3 vObj;
   void main(){ vObj = normalize(position); vN = normalize(mat3(modelMatrix) * normal); vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
-const planetFrag = `
+export const planetFrag = `
   uniform vec3 uSun; uniform float uTime; varying vec3 vN; varying vec3 vW; varying vec3 vObj;
   float h(vec3 p){ p = fract(p*0.3183099+0.1); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
   float n(vec3 x){ vec3 i=floor(x); vec3 f=fract(x); f=f*f*(3.0-2.0*f);

@@ -9,6 +9,7 @@ import { Navigator } from './ui/navigator.js';
 import { HUD } from './ui/hud.js';
 import { Hangar, loadSettings } from './ui/hangar.js';
 import { DropScene } from './scenes/drop.js';
+import { Outro } from './scenes/outro.js';
 import { Game } from './game.js';
 import { audio } from './audio.js';
 
@@ -60,6 +61,7 @@ class App {
     await this.tick();
     this.hangar = new Hangar(this);
     this.drop = new DropScene(this);
+    this.outro = new Outro(this); // the ending of the campaign
     this.applySettings(this.settings);
     this.setLoad(1, 'Ready!');
 
@@ -206,11 +208,19 @@ class App {
 
   onKey(e) {
     if (this.state === 'drop' && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) this.drop.skip();
+    if (this.state === 'outro' && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) { this.outro.skip(); return; }
     if (this.state === 'play' && e.code === 'Escape' && !this.input.locked) this.pause();
     else if (this.state === 'paused' && e.code === 'Escape' && !this.input.locked) this.resume();
   }
 
   showEnd(win, s) {
+    // winning the last mission plays the ending first: the Earth Cannon, the enemy planet, and the fleet
+    if (win && s.campaign && s.campaign.last && !s.afterOutro) {
+      this.state = 'outro';
+      this.input.unlock();
+      this.outro.start(() => this.showEnd(win, { ...s, afterOutro: true }));
+      return;
+    }
     this.state = 'end';
     this.input.unlock();
     this.input.enabled = false;
@@ -218,7 +228,7 @@ class App {
     end.classList.toggle('end-defeat', !win);
     const camp = s.campaign;
     $('end-title').textContent = win ? (camp ? (camp.last ? 'CAMPAIGN COMPLETE' : 'MISSION COMPLETE') : 'VICTORY') : s.title;
-    $('end-sub').textContent = win ? (camp ? (camp.last ? `${this.hangar.cfg.name} broke the invasion!` : `Mission ${camp.n}: ${camp.title}`) : `${this.hangar.cfg.name} saved the city!`) : s.sub;
+    $('end-sub').textContent = win ? (camp ? (camp.last ? `${this.hangar.cfg.name} destroyed the enemy planet. But the fleet is coming: Part 3 begins soon!` : `Mission ${camp.n}: ${camp.title}`) : `${this.hangar.cfg.name} saved the city!`) : s.sub;
     $('end-stats').innerHTML = [
       ['Kaiju defeated', s.kills - (s.tripods || 0)], ['Tripods destroyed', s.tripods || 0], ...(s.saved !== null && s.saved !== undefined ? [['Survivors saved', s.saved]] : []), ['Weak spot hits', s.weak], ['Buildings smashed', s.buildings], ['Damage dealt', s.damage],
       ['Waves reached', s.wave], ['Power plant', `${s.plant}%`], ['Battle time', s.time],
@@ -239,6 +249,9 @@ class App {
     } else if (this.state === 'drop') {
       this.drop.update(dt, t);
       scene = this.drop.scene; camera = this.drop.camera;
+    } else if (this.state === 'outro') {
+      scene = this.outro.scene; camera = this.outro.camera; // set these first: the scene can end inside update
+      this.outro.update(dt);
     } else {
       if (this.state !== 'paused' && this.state !== 'end') this.game.update(dt);
       else if (this.state === 'end') this.game.update(dt * 0.3);

@@ -124,6 +124,14 @@ Patrick can rename or change any of them.
 - Missions 9 to 15: Scout Squadron (scouts destroy tripods until the Boss Pod comes), Catch the
   Sprinters, Break the Shield, Fire From the Sky, Ghost Hunt, Double Trouble, The Overlord.
 
+### The ending, and wrecks (Patrick, 2026-11-27)
+
+- **When tripods fall, they stay.** (Claude's call: the newest 14 wrecks stay; older ones are cleared.)
+- **At the end of the last mission a laser gets shot at the enemy planet and destroys it, but then it
+  shows hundreds of ships coming. And then part three begins.** Built as `src/scenes/outro.js`, about
+  28 seconds: the Earth Cannon charges, fires, the planet blows apart, 420 ships fly past, and a
+  "PART 3 BEGINS" card. Part 3 itself is not designed yet: that is Patrick's to describe.
+
 ## Build order
 
 1. **(Built 2026-11-27.) Attacker tripod in the current city** (lightning arrival, legs-first rise, scanner,

@@ -331,6 +331,10 @@ export class Game {
 
     if (this.state === 'play' || this.state === 'over' || this.state === 'landing') {
       for (const k of this.kaijus) k.update(dt);
+      { // fallen tripods stay on the map; keep the newest 14 wrecks
+        const wrecks = this.kaijus.filter((k) => k.isTripod && k.dead && k.landed);
+        if (wrecks.length > 14) wrecks[0].removeMe = true;
+      }
       for (let i = this.kaijus.length - 1; i >= 0; i--) if (this.kaijus[i].removeMe) { this.kaijus[i].remove(); this.kaijus.splice(i, 1); }
       this.projectiles.update(dt);
       this.military.update(dt);
