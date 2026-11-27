@@ -78,7 +78,34 @@ class App {
     this.fpsT = 0; this.frames = 0; this.slow = 0;
     // expose for debugging/testing
     window.__kbs = this;
-    renderer.setAnimationLoop(() => this.frame());
+    // If anything throws inside a frame, three.js stops asking for the next one and the picture freezes for good.
+    // Catch it, show what it was, and keep the game going.
+    renderer.setAnimationLoop(() => { try { this.frame(); } catch (e) { this.input.endFrame(); this.reportError(e, 'frame'); } });
+    const tag = document.createElement('div');
+    tag.id = 'build-tag';
+    tag.style.cssText = 'position:fixed;right:10px;bottom:6px;z-index:40;font:600 11px Rajdhani,sans-serif;color:rgba(255,255,255,.45);pointer-events:none';
+    tag.textContent = 'version ' + __BUILD__;
+    document.body.appendChild(tag);
+    window.addEventListener('error', (e) => this.reportError(e.error || e.message, 'page'));
+  }
+
+  // Show a small note instead of freezing. The text is what to read out to whoever is fixing the game.
+  reportError(e, where = '') {
+    this.errCount = (this.errCount || 0) + 1;
+    const msg = String((e && e.message) || e).slice(0, 110);
+    const at = e && e.stack ? (String(e.stack).split('\n')[1] || '').replace(/^\s*at\s*/, '').replace(/https?:\/\/[^ )]*\//g, '').slice(0, 60) : '';
+    if (this.errCount <= 3 || this.errCount % 120 === 0) console.error('[kbs]', where, e);
+    let box = document.getElementById('err-box');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'err-box';
+      box.style.cssText = 'position:fixed;left:10px;bottom:6px;z-index:41;max-width:70vw;padding:5px 9px;background:rgba(120,0,0,.85);color:#fff;font:600 12px monospace;border:1px solid #ff6a6a;pointer-events:none';
+      document.body.appendChild(box);
+    }
+    box.textContent = `GAME ERROR (${where}) x${this.errCount}: ${msg} ${at}  [version ${__BUILD__}]`;
+    box.style.display = 'block';
+    clearTimeout(this.errT);
+    this.errT = setTimeout(() => { box.style.display = 'none'; }, 20000);
   }
 
   setLoad(f, text) {

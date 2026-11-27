@@ -411,7 +411,10 @@ export class Game {
     if (this.pilot && (playing || this.state === 'over')) this.pilot.update(dt, playing ? input : { down: () => false, pressed: () => false, mouse: () => false }, this.view);
 
     if (this.state === 'play' || this.state === 'over' || this.state === 'landing') {
-      for (const k of this.kaijus) k.update(dt);
+      for (const k of this.kaijus) {
+        // one broken enemy must not freeze the whole game: report it and take it off the map
+        try { k.update(dt); } catch (e) { this.app.reportError(e, k.type || 'kaiju'); k.dead = true; k.removeMe = true; }
+      }
       { // fallen tripods stay on the map; keep the newest 14 wrecks
         const wrecks = this.kaijus.filter((k) => k.isTripod && k.dead && k.landed);
         if (wrecks.length > (this.lowPower ? 5 : 14)) wrecks[0].removeMe = true; // fewer on iPads and phones, to save memory
